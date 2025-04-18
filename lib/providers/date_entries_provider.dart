@@ -53,4 +53,13 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<String>>> {
     state = updatedEntries;
     box.put('entries', state);
   }
+
+  void removeEntriesForDate(String date) {
+    final updatedEntries = Map<String, List<String>>.from(state);
+
+    updatedEntries.remove(date);
+
+    state = updatedEntries;
+    box.put('entries', state);
+  }
 }

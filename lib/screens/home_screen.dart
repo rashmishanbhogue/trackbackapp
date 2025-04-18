@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'providers/theme_provider.dart';
-import 'providers/date_entries_provider.dart';
-import 'theme.dart';
-import 'widgets/badges_svg.dart';
+import 'settings_screen.dart';
+import '../providers/theme_provider.dart';
+import '../providers/date_entries_provider.dart';
+import '../theme.dart';
+import '../widgets/badges_svg.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -19,8 +20,9 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('TrackBack'),
-        actions: [
-          IconButton(
+        leading: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: IconButton(
             icon: Icon(
               Theme.of(context).brightness == Brightness.light
                   ? Icons.dark_mode
@@ -29,6 +31,21 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(ThemeProvider.notifier).toggleTheme();
             },
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SettingsScreen()),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -53,7 +70,6 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               SliverToBoxAdapter(child: const SizedBox(height: 10)),
-
               SliverToBoxAdapter(
                 child: TextField(
                   controller: controller,
@@ -74,9 +90,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-
               SliverToBoxAdapter(child: const SizedBox(height: 20)),
-
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (BuildContext context, int index) {
@@ -85,52 +99,114 @@ class HomeScreen extends ConsumerWidget {
                   childCount: 1,
                 ),
               ),
-
               SliverToBoxAdapter(child: const SizedBox(height: 20)),
               SliverToBoxAdapter(
                 child:
                     const Text("Previous Days", style: TextStyle(fontSize: 20)),
               ),
               SliverToBoxAdapter(child: const SizedBox(height: 10)),
-
-              // sorted previous entries with latest date on top
-              // needn't have an entry for each date on the calendar
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (BuildContext context, int index) {
                     final previousDates = dateEntries.keys
                         .where((date) => date != todayDate)
                         .toList()
-                      ..sort((a, b) => b.compareTo(a)); // newest entry first
+                      ..sort((a, b) => b.compareTo(a));
 
                     if (index >= previousDates.length) return null;
 
                     final previousDate = previousDates[index];
+                    final formattedDate = DateFormat('dd-MMM-yyyy')
+                        .format(DateTime.parse(previousDate));
                     int count = dateEntries[previousDate]?.length ?? 0;
 
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: index.isEven
-                            ? Theme.of(context)
-                                .colorScheme
-                                .surface
-                                .withOpacity(0.1)
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ExpansionTile(
-                        title: Text(previousDate),
-                        trailing: buildBadge(count),
-                        children:
-                            (dateEntries[previousDate] ?? []).map((entry) {
-                          return ListTile(
-                            title: Text(entry),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Dismissible(
+                        key: Key(previousDate),
+                        direction: DismissDirection
+                            .endToStart, // only swipe right to left to delete
+                        background: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color:
+                                  Colors.redAccent, // white bin icon on red bg
+                              borderRadius: BorderRadius.circular(
+                                  20), // matches outer card
+                            ),
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child:
+                                const Icon(Icons.delete, color: Colors.white),
+                          ),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDeleteConfirmationDialog(
+                            context,
+                            previousDate,
+                            ref,
                           );
-                        }).toList(),
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: index.isEven
+                                  ? Theme.of(context).brightness ==
+                                          Brightness.light
+                                      ? Colors.grey.shade100
+                                      : Theme.of(context).colorScheme.surface
+                                  : Theme.of(context).brightness ==
+                                          Brightness.light
+                                      ? Colors.grey.shade200
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: ExpansionTile(
+                              title: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      formattedDate,
+                                      style: TextStyle(
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.light
+                                            ? Colors.black
+                                            : Colors.white70,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: SizedBox(width: 0),
+                                    ),
+                                    buildBadge(count),
+                                  ],
+                                ),
+                              ),
+                              trailing: const SizedBox.shrink(),
+                              children: (dateEntries[previousDate] ?? [])
+                                  .map((entry) {
+                                return ListTile(
+                                  title: Text(
+                                    entry,
+                                    style: TextStyle(
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.light
+                                          ? Colors.black87
+                                          : Colors.white60,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -219,5 +295,36 @@ class HomeScreen extends ConsumerWidget {
 
   Widget buildBadge(int count) {
     return BadgesSVG.getBadge(count);
+  }
+
+  Future<bool?> showDeleteConfirmationDialog(
+      BuildContext context, String date, WidgetRef ref) {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Entries?'),
+          content: const Text(
+              'Are you sure you want to delete all entries for this date?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                ref
+                    .read(dateEntriesProvider.notifier)
+                    .removeEntriesForDate(date);
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
