@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
@@ -125,9 +126,23 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-        const Text(
-          'Entries Trend:',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Entries Trend:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () {
+                showBadgeLegend(context);
+              },
+              tooltip: 'View Badge Details',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         AspectRatio(
@@ -192,9 +207,23 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-        const Text(
-          'Badge Distribution:',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Badge Distribution:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () {
+                showBadgeLegend(context);
+              },
+              tooltip: 'View Badge Details',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         Center(
@@ -284,5 +313,83 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  void showBadgeLegend(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  '🚀 Earn Badges!',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var entry in [
+                      {
+                        'asset': 'assets/badges/badge_0.svg',
+                        'label': '0 entries'
+                      },
+                      {
+                        'asset': 'assets/badges/badge_1.svg',
+                        'label': '1–4 entries'
+                      },
+                      {
+                        'asset': 'assets/badges/badge_2.svg',
+                        'label': '5–9 entries'
+                      },
+                      {
+                        'asset': 'assets/badges/badge_3.svg',
+                        'label': '10–14 entries'
+                      },
+                      {
+                        'asset': 'assets/badges/badge_4.svg',
+                        'label': '15–19 entries'
+                      },
+                      {
+                        'asset': 'assets/badges/badge_5.svg',
+                        'label': '20+ entries'
+                      },
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SvgPicture.asset(entry['asset']!,
+                                width: 36, height: 36),
+                            const SizedBox(width: 20),
+                            Text(
+                              entry['label']!,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
