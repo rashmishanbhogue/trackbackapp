@@ -1,9 +1,7 @@
-import 'package:langchain/langchain.dart';
-import 'package:langchain_openai/langchain_openai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../models/entry.dart';
+import '../utils/constants.dart';
 
 Future<String> classifyEntry(String text) async {
   final url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -23,12 +21,18 @@ Future<String> classifyEntry(String text) async {
     'messages': [
       {
         'role': 'system',
-        'content':
-            'You are a strict classifier. Return only the label, no explanations, no extra text.'
+        'content': '''
+You are a strict classifier. Return only one label from this list, nothing else:
+
+Productive, Maintenance, Wellbeing, Leisure, Social, Idle.
+
+Do not return anything outside this list, no extra text, no explanations.
+If uncertain, return "Idle".
+'''
       },
       {
         'role': 'user',
-        'content': 'Classify this text into one label only:\n"$text"',
+        'content': 'Classify this text:\n"$text"',
       }
     ],
     'temperature': 0.0,
@@ -41,9 +45,9 @@ Future<String> classifyEntry(String text) async {
       final data = jsonDecode(response.body);
       final choices = data['choices'];
       if (choices != null && choices.isNotEmpty) {
-        final content = choices[0]['message']['content'];
-        if (content != null) {
-          return content.trim();
+        final content = choices[0]['message']['content']?.trim();
+        if (content != null && standardCategories.contains(content)) {
+          return content;
         }
       }
     }
