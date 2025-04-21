@@ -8,6 +8,7 @@ import '../models/entry.dart';
 import '../utils/time_utils.dart';
 import '../utils/ai_labeling.dart';
 import '../utils/hive_utils.dart';
+import '../utils/constants.dart';
 
 class AiMetricsScreen extends ConsumerStatefulWidget {
   const AiMetricsScreen({super.key});
@@ -47,6 +48,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
       'Afternoon': 0,
       'Evening': 0
     };
+    Map<String, List<Entry>> labelToEntries = {};
 
     final storedLabels = await getLabelsFromHive();
     labelCounts.addAll(storedLabels);
@@ -56,10 +58,10 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
         final block = getTimeOfDayBlock(entry.timestamp);
         timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
       }
-
       return {
         'labels': labelCounts,
         'times': timeOfDayCounts,
+        'entries': labelToEntries, // empty if loading from hive
       };
     }
 
@@ -68,10 +70,11 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
       if (label.isEmpty) {
         label = await classifyEntry(entry.text);
       }
-
       final validLabel = label.isNotEmpty ? label : 'Uncategorized';
       final category = getBroaderCategory(validLabel);
+
       labelCounts[category] = (labelCounts[category] ?? 0) + 1;
+      labelToEntries.putIfAbsent(category, () => []).add(entry);
 
       final block = getTimeOfDayBlock(entry.timestamp);
       timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
@@ -81,29 +84,13 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     return {
       'labels': labelCounts,
       'times': timeOfDayCounts,
+      'entries': labelToEntries,
     };
   }
 
   String getBroaderCategory(String label) {
-    const broaderCategories = {
-      'Work': ['Bug Fix', 'Development', 'Programming', 'Office', 'Test'],
-      'Chores': ['Cook', 'Meal', 'Dinner', 'Breakfast', 'Lunch', 'Clean'],
-      'Errands': ['Shopping', 'Bank'],
-      'Health': ['Workout', 'Exercise', 'Health', 'Walk'],
-      'Distraction': [
-        'Social',
-        'Gaming',
-        'TV',
-        'Youtube',
-        'Phone',
-        'Instagram'
-      ],
-    };
-
-    for (var category in broaderCategories.keys) {
-      if (broaderCategories[category]!.contains(label)) {
-        return category;
-      }
+    if (standardCategories.contains(label)) {
+      return label;
     }
     return 'Uncategorized';
   }
@@ -198,11 +185,12 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
           final labelCounts = snapshot.data!['labels'] as Map<String, int>;
           final timeOfDayCounts = snapshot.data!['times'] as Map<String, int>;
+          final labelToEntries =
+              snapshot.data!['entries'] as Map<String, List<Entry>>;
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -223,27 +211,100 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  ...labelCounts.entries.map((e) {
-                    return Row(
-                      children: [
-                        Text(
-                          '${e.key}: ${e.value}',
-                          style: const TextStyle(fontSize: 16),
+
+                  /// build the category chips
+                  ...standardCategories.map((category) {
+                    final count = labelCounts[category] ?? 0;
+                    final entries = labelToEntries[category] ?? [];
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
                         ),
-                        if (isRefreshing)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 10),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
+                        collapsedShape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        trailing: const SizedBox.shrink(),
+                        title: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: getCategoryColor(category, isDark),
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                      ],
+                          child: isRefreshing
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$category: $count',
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.white70
+                                            : Colors.black87,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Center(
+                                  child: Text(
+                                    '$category: $count',
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        children: entries.isNotEmpty
+                            ? entries
+                                .map((entry) => ListTile(
+                                      title: Text(
+                                        entry.text,
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        DateFormat('dd MMM, HH:mm')
+                                            .format(entry.timestamp),
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.white54
+                                              : Colors.black54,
+                                        ),
+                                      ),
+                                    ))
+                                .toList()
+                            : [
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                      'No entries found for this category.'),
+                                ),
+                              ],
+                      ),
                     );
                   }).toList(),
+
                   const Divider(height: 32),
                   const Text(
                     'Time of Day Distribution:',
@@ -263,5 +324,24 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
         },
       ),
     );
+  }
+
+  Color getCategoryColor(String category, bool isDark) {
+    switch (category) {
+      case 'Productive':
+        return isDark ? Colors.blue.shade200 : Colors.blue.shade100;
+      case 'Maintenance':
+        return isDark ? Colors.grey.shade500 : Colors.grey.shade200;
+      case 'Wellbeing':
+        return isDark ? Colors.green.shade200 : Colors.green.shade100;
+      case 'Leisure':
+        return isDark ? Colors.purple.shade200 : Colors.purple.shade100;
+      case 'Social':
+        return isDark ? Colors.pink.shade200 : Colors.pink.shade100;
+      case 'Idle':
+        return isDark ? Colors.grey.shade700 : Colors.grey.shade400;
+      default:
+        return Colors.grey.shade200;
+    }
   }
 }
