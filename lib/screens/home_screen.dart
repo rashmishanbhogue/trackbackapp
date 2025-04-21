@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
-import '../theme.dart';
 import '../widgets/badges_svg.dart';
 import '../models/entry.dart';
 
@@ -18,6 +16,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class HomeScreenState extends ConsumerState<HomeScreen> {
   late TextEditingController controller;
+  final scrollController = ScrollController();
+
+  int? expandedChipIndex;
+
+  final Map<String, GlobalKey> expansionTileKeys = {};
 
   @override
   void initState() {
@@ -36,8 +39,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final dateEntries = ref.watch(dateEntriesProvider);
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    int? expandedChipIndex;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +65,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const SettingsScreen()),
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               },
             ),
@@ -77,6 +79,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: CustomScrollView(
+            controller: scrollController,
             slivers: [
               SliverToBoxAdapter(
                 child: Container(
@@ -101,7 +104,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                             todayDate,
                             Entry(
                               text: value.trim(),
-                              label: '', // empty until API fills it
+                              label: '',
                               timestamp: DateTime.now(),
                             ),
                           );
@@ -147,20 +150,20 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         .format(DateTime.parse(previousDate));
                     int count = dateEntries[previousDate]?.length ?? 0;
 
+                    final tileKey = expansionTileKeys.putIfAbsent(
+                        previousDate, () => GlobalKey());
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Dismissible(
                         key: Key(previousDate),
-                        direction: DismissDirection
-                            .endToStart, // only swipe right to left to delete
+                        direction: DismissDirection.endToStart,
                         background: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
                             decoration: BoxDecoration(
-                              color:
-                                  Colors.redAccent, // white bin icon on red bg
-                              borderRadius: BorderRadius.circular(
-                                  20), // matches outer card
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -170,10 +173,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         confirmDismiss: (direction) async {
                           return await showDeleteConfirmationDialog(
-                            context,
-                            previousDate,
-                            ref,
-                          );
+                              context, previousDate, ref);
                         },
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
@@ -194,7 +194,45 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: ExpansionTile(
-                              key: Key(previousDate),
+                              key: tileKey,
+                              onExpansionChanged: (isExpanded) {
+                                FocusScope.of(context).unfocus();
+                                setState(() {
+                                  if (isExpanded) {
+                                    expandedChipIndex =
+                                        index; // only one can be open at a time (still doesnt work well)
+                                  } else if (expandedChipIndex == index) {
+                                    expandedChipIndex =
+                                        null; // if the same tile is closed, clear it
+                                  }
+                                });
+
+                                if (isExpanded) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    final ctx = tileKey.currentContext;
+                                    if (ctx != null) {
+                                      final renderBox =
+                                          ctx.findRenderObject() as RenderBox;
+                                      final position = renderBox
+                                          .localToGlobal(Offset.zero)
+                                          .dy;
+                                      final screenHeight =
+                                          MediaQuery.of(ctx).size.height;
+                                      final isTooLow =
+                                          position > screenHeight * 0.6;
+
+                                      Scrollable.ensureVisible(
+                                        ctx,
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeInOut,
+                                        alignment: isTooLow ? 0.05 : 0.1,
+                                      );
+                                    }
+                                  });
+                                }
+                              },
                               title: Padding(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 16),
@@ -210,9 +248,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                             : Colors.white70,
                                       ),
                                     ),
-                                    Expanded(
-                                      child: SizedBox(width: 0),
-                                    ),
+                                    const Expanded(child: SizedBox(width: 0)),
                                     buildBadge(count),
                                   ],
                                 ),
@@ -255,7 +291,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   todayDate,
                   Entry(
                     text: controller.text.trim(),
-                    label: '', // empty until API fills it
+                    label: '',
                     timestamp: DateTime.now(),
                   ),
                 );
@@ -283,6 +319,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: entries.length,
             itemBuilder: (context, index) {
+              final reversedEntry = entries.reversed.toList()[index];
               return ListTile(
                 contentPadding: const EdgeInsets.only(left: 12, right: 0),
                 title: RichText(
@@ -297,7 +334,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       TextSpan(
-                        text: entries[index].text,
+                        text: reversedEntry.text,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.normal,
@@ -314,7 +351,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   onPressed: () {
                     ref
                         .read(dateEntriesProvider.notifier)
-                        .removeEntry(date, entries[index]);
+                        .removeEntry(date, reversedEntry);
                   },
                 ),
               );

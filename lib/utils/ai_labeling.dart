@@ -1,30 +1,55 @@
 import 'package:langchain/langchain.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/entry.dart';
 
 Future<String> classifyEntry(String text) async {
-  final promptTemplate = PromptTemplate.fromTemplate(
-    '''
-Classify the following journal entry into a one-word category.
-Some example categories: "Productive", "Distraction", "Learning", "Leisure", "Chore", "Social", etc.
+  final url = 'https://api.groq.com/openai/v1/chat/completions';
+  final apiKey = dotenv.env['GROQ_API_KEY'];
 
-Entry: {entry}
-Category:
-''',
-  );
+  if (apiKey == null || apiKey.isEmpty) {
+    return 'Uncategorized'; // fallback instead of error
+  }
 
-  final llm = ChatOpenAI(
-    apiKey: dotenv.env['GROQ_API_KEY']!,
-    baseUrl: 'https://api.groq.com/openai/v1',
-  );
+  final headers = {
+    'Authorization': 'Bearer $apiKey',
+    'Content-Type': 'application/json',
+  };
 
-  final chain = promptTemplate.pipe(llm).pipe(const StringOutputParser());
+  final body = jsonEncode({
+    'model': 'llama3-8b-8192',
+    'messages': [
+      {
+        'role': 'system',
+        'content':
+            'You are a strict classifier. Return only the label, no explanations, no extra text.'
+      },
+      {
+        'role': 'user',
+        'content': 'Classify this text into one label only:\n"$text"',
+      }
+    ],
+    'temperature': 0.0,
+  });
 
   try {
-    final result = await chain.invoke({'entry': text});
-    return result.trim();
+    final response =
+        await http.post(Uri.parse(url), headers: headers, body: body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final choices = data['choices'];
+      if (choices != null && choices.isNotEmpty) {
+        final content = choices[0]['message']['content'];
+        if (content != null) {
+          return content.trim();
+        }
+      }
+    }
   } catch (e) {
-    return 'Unknown';
+    print('Error during classification: $e');
   }
+
+  return 'Uncategorized'; // safe fallback
 }

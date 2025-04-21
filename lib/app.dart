@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trackbackapp/widgets/navbar.dart';
 import 'providers/theme_provider.dart';
-import 'screens/home_screen.dart';
-import 'widgets/navbar.dart';
 
 class TrackBackApp extends ConsumerWidget {
   const TrackBackApp({super.key});
@@ -15,9 +13,6 @@ class TrackBackApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Trackback',
       theme: theme,
-      // theme: ThemeData(
-      //   useMaterial3: true,
-      // ),
       home: CustomNavBar(),
     );
   }

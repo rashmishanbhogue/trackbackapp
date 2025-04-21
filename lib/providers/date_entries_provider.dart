@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/entry.dart';
-import 'package:intl/intl.dart';
+import '../utils/hive_utils.dart';
 
 final hiveBoxProvider = Provider<Box>((ref) {
   throw UnimplementedError(); // will be overridden in main()
@@ -23,11 +24,6 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     loadEntries();
   }
 
-  // Future<void> initialize() async {
-  //   box = await Hive.openBox('trackback');
-  //   loadEntries();
-  // }
-
   void loadEntries() {
     final stored = box.get('entries');
     if (stored != null && stored is Map) {
@@ -36,8 +32,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
           final date = e.key as String;
           final rawList = e.value;
 
-          if (rawList is! List)
-            return MapEntry(date, <Entry>[]); // skip invalid list
+          if (rawList is! List) return MapEntry(date, <Entry>[]);
 
           final entries = rawList
               .map<Entry?>((item) {
@@ -47,16 +42,13 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
                       final json = jsonDecode(item);
                       return Entry.fromJson(json);
                     } else {
-                      // assume plain text, fallback!
                       return Entry(
                           text: item, label: '', timestamp: DateTime.now());
                     }
                   } else {
-                    print('Skipped invalid entry for $date: $item');
                     return null;
                   }
                 } catch (e) {
-                  print('Error parsing entry for $date: $e');
                   return null;
                 }
               })
@@ -70,6 +62,16 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     } else {
       state = {};
     }
+  }
+
+  // use storeLabelsInHive to store updated label counts
+  Future<void> updateLabelCounts(Map<String, int> labelCounts) async {
+    await storeLabelsInHive(labelCounts);
+  }
+
+  // use getLabelsFromHive to load previously stored label counts
+  Future<Map<String, int>> getStoredLabelCounts() async {
+    return await getLabelsFromHive();
   }
 
   void addEntry(String date, Entry entry) {

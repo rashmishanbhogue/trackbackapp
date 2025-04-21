@@ -50,10 +50,6 @@ class CustomNavBarState extends State<CustomNavBar> {
     );
   }
 
-  // Widget getIcon(IconData icon, int index, {bool selected = false}) {
-  //   return Icon(icon, size: selected ? 30 : 24);
-  // }
-
   Widget getSelectedScreen() {
     switch (currentIndex) {
       case 0:
