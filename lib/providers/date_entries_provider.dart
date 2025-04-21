@@ -1,56 +1,135 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
+import '../models/entry.dart';
+import '../utils/hive_utils.dart';
+
+final hiveBoxProvider = Provider<Box>((ref) {
+  throw UnimplementedError(); // will be overridden in main()
+});
 
 final dateEntriesProvider =
-    StateNotifierProvider<DateEntriesNotifier, Map<String, List<String>>>(
-  (ref) => DateEntriesNotifier(),
+    StateNotifierProvider<DateEntriesNotifier, Map<String, List<Entry>>>(
+  (ref) {
+    final box = ref.watch(hiveBoxProvider);
+    return DateEntriesNotifier(box);
+  },
 );
 
-class DateEntriesNotifier extends StateNotifier<Map<String, List<String>>> {
-  DateEntriesNotifier() : super({}) {
-    initialize();
-  }
+class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
+  final Box box;
 
-  late Box box;
-
-  Future<void> initialize() async {
-    box = await Hive.openBox('trackback');
+  DateEntriesNotifier(this.box) : super({}) {
     loadEntries();
   }
 
   void loadEntries() {
-    final storedData = box.get('entries', defaultValue: {});
-    if (storedData is Map) {
-      state = Map<String, List<String>>.from(storedData.map((key, value) =>
-          MapEntry(key, List<String>.from(value as List<dynamic>))));
+    final stored = box.get('entries');
+    if (stored != null && stored is Map) {
+      final parsed = Map<String, List<Entry>>.fromEntries(
+        stored.entries.map((e) {
+          final date = e.key as String;
+          final rawList = e.value;
+
+          if (rawList is! List) return MapEntry(date, <Entry>[]);
+
+          final entries = rawList
+              .map<Entry?>((item) {
+                try {
+                  if (item is String) {
+                    if (item.trim().startsWith('{')) {
+                      final json = jsonDecode(item);
+                      return Entry.fromJson(json);
+                    } else {
+                      return Entry(
+                          text: item, label: '', timestamp: DateTime.now());
+                    }
+                  } else {
+                    return null;
+                  }
+                } catch (e) {
+                  return null;
+                }
+              })
+              .whereType<Entry>()
+              .toList(); // remove nulls
+
+          return MapEntry(date, entries);
+        }),
+      );
+      state = parsed;
+    } else {
+      state = {};
     }
   }
 
-  void addEntry(String date, String entry) {
-    final updatedEntries = Map<String, List<String>>.from(state);
+  // use storeLabelsInHive to store updated label counts
+  Future<void> updateLabelCounts(Map<String, int> labelCounts) async {
+    await storeLabelsInHive(labelCounts);
+  }
 
-    if (!updatedEntries.containsKey(date)) {
-      updatedEntries[date] = [];
-    }
+  // use getLabelsFromHive to load previously stored label counts
+  Future<Map<String, int>> getStoredLabelCounts() async {
+    return await getLabelsFromHive();
+  }
 
+  void addEntry(String date, Entry entry) {
+    final updatedEntries = Map<String, List<Entry>>.from(state);
+
+    updatedEntries.putIfAbsent(date, () => []);
     updatedEntries[date]!.add(entry);
 
     state = updatedEntries;
-    box.put('entries', state);
+
+    // store as json strings in hive
+    final storedMap = updatedEntries.map(
+      (key, value) => MapEntry(
+        key,
+        value.map((entry) => jsonEncode(entry.toJson())).toList(),
+      ),
+    );
+
+    box.put('entries', storedMap);
   }
 
-  void removeEntry(String date, String entry) {
-    final updatedEntries = Map<String, List<String>>.from(state);
+  void removeEntry(String date, Entry entry) {
+    final updatedEntries = Map<String, List<Entry>>.from(state);
 
     if (updatedEntries.containsKey(date)) {
-      updatedEntries[date]!.remove(entry);
+      updatedEntries[date]!.removeWhere(
+          (e) => e.text == entry.text && e.timestamp == entry.timestamp);
+
       if (updatedEntries[date]!.isEmpty) {
         updatedEntries.remove(date);
       }
     }
 
     state = updatedEntries;
+
+    final storedMap = updatedEntries.map(
+      (key, value) => MapEntry(
+        key,
+        value.map((entry) => jsonEncode(entry.toJson())).toList(),
+      ),
+    );
+
+    box.put('entries', state);
+  }
+
+  void removeEntriesForDate(String date) {
+    final updatedEntries = Map<String, List<Entry>>.from(state);
+
+    updatedEntries.remove(date);
+
+    state = updatedEntries;
+
+    final storedMap = updatedEntries.map(
+      (key, value) => MapEntry(
+        key,
+        value.map((entry) => jsonEncode(entry.toJson())).toList(),
+      ),
+    );
     box.put('entries', state);
   }
 }
