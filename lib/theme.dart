@@ -58,8 +58,8 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: ColorScheme.dark(
-      primary: Colors.orange[300]!,
-      secondary: Colors.deepOrangeAccent,
+      primary: Colors.amber[700]!,
+      secondary: Colors.orangeAccent,
     ),
     scaffoldBackgroundColor: Colors.black,
     textTheme: const TextTheme(

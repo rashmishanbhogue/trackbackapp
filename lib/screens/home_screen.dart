@@ -7,15 +7,37 @@ import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
 import '../theme.dart';
 import '../widgets/badges_svg.dart';
+import '../models/entry.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => HomeScreenState();
+}
+
+class HomeScreenState extends ConsumerState<HomeScreen> {
+  late TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController();
+    print('TextEditingController initialized');
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dateEntries = ref.watch(dateEntriesProvider);
-    final controller = TextEditingController();
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    int? expandedChipIndex;
 
     return Scaffold(
       appBar: AppBar(
@@ -75,9 +97,14 @@ class HomeScreen extends ConsumerWidget {
                   controller: controller,
                   onSubmitted: (value) {
                     if (value.trim().isNotEmpty) {
-                      ref
-                          .read(dateEntriesProvider.notifier)
-                          .addEntry(todayDate, value.trim());
+                      ref.read(dateEntriesProvider.notifier).addEntry(
+                            todayDate,
+                            Entry(
+                              text: value.trim(),
+                              label: '', // empty until API fills it
+                              timestamp: DateTime.now(),
+                            ),
+                          );
                       controller.clear();
                       FocusScope.of(context).unfocus();
                     }
@@ -167,6 +194,7 @@ class HomeScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: ExpansionTile(
+                              key: Key(previousDate),
                               title: Padding(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 16),
@@ -190,11 +218,12 @@ class HomeScreen extends ConsumerWidget {
                                 ),
                               ),
                               trailing: const SizedBox.shrink(),
+                              initiallyExpanded: expandedChipIndex == index,
                               children: (dateEntries[previousDate] ?? [])
                                   .map((entry) {
                                 return ListTile(
                                   title: Text(
-                                    entry,
+                                    entry.text,
                                     style: TextStyle(
                                       color: Theme.of(context).brightness ==
                                               Brightness.light
@@ -222,9 +251,14 @@ class HomeScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           if (controller.text.trim().isNotEmpty) {
-            ref
-                .read(dateEntriesProvider.notifier)
-                .addEntry(todayDate, controller.text.trim());
+            ref.read(dateEntriesProvider.notifier).addEntry(
+                  todayDate,
+                  Entry(
+                    text: controller.text.trim(),
+                    label: '', // empty until API fills it
+                    timestamp: DateTime.now(),
+                  ),
+                );
             controller.clear();
             FocusScope.of(context).unfocus();
           }
@@ -237,7 +271,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget buildEntriesForDate(WidgetRef ref, String date) {
     final dateEntries = ref.watch(dateEntriesProvider);
-    List<String>? entries = dateEntries[date];
+    List<Entry>? entries = dateEntries[date];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +297,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       TextSpan(
-                        text: entries[index],
+                        text: entries[index].text,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.normal,
