@@ -48,21 +48,6 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
       'Evening': 0
     };
 
-    final storedLabels = await getLabelsFromHive();
-    labelCounts.addAll(storedLabels);
-
-    if (labelCounts.isNotEmpty) {
-      for (final entry in allEntries) {
-        final block = getTimeOfDayBlock(entry.timestamp);
-        timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
-      }
-
-      return {
-        'labels': labelCounts,
-        'times': timeOfDayCounts,
-      };
-    }
-
     for (final entry in allEntries) {
       String label = entry.label;
       if (label.isEmpty) {
@@ -86,23 +71,27 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   String getBroaderCategory(String label) {
     const broaderCategories = {
-      'Work': ['Bug Fix', 'Development', 'Programming', 'Office', 'Test'],
-      'Chores': ['Cook', 'Meal', 'Dinner', 'Breakfast', 'Lunch', 'Clean'],
-      'Errands': ['Shopping', 'Bank'],
-      'Health': ['Workout', 'Exercise', 'Health', 'Walk'],
+      'Work': ['bug fix', 'development', 'programming', 'office', 'test'],
+      'Chores': ['cook', 'meal', 'dinner', 'breakfast', 'lunch', 'clean'],
+      'Errands': ['shopping', 'bank', 'temple'],
+      'Health': ['workout', 'exercise', 'health', 'walk'],
       'Distraction': [
-        'Social',
-        'Gaming',
-        'TV',
-        'Youtube',
-        'Phone',
-        'Instagram'
+        'social',
+        'gaming',
+        'tv',
+        'youtube',
+        'phone',
+        'instagram'
       ],
     };
 
+    final lowerLabel = label.toLowerCase();
+
     for (var category in broaderCategories.keys) {
-      if (broaderCategories[category]!.contains(label)) {
-        return category;
+      for (var keyword in broaderCategories[category]!) {
+        if (lowerLabel.contains(keyword)) {
+          return category;
+        }
       }
     }
     return 'Uncategorized';
