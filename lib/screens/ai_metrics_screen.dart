@@ -144,7 +144,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const SettingsScreen()),
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               },
             ),
@@ -199,8 +200,6 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // always show the chips immediately upon loading
               ...standardCategories.map((category) {
                 final count = labelCounts[category] ?? 0;
                 final entries = labelToEntries[category] ?? [];
@@ -229,10 +228,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                               children: [
                                 Text(
                                   '$category: $count',
-                                  style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black87,
+                                  style: const TextStyle(
+                                    color: Colors.black87,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -243,7 +240,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                        theme.colorScheme.primary),
+                                        Colors.black),
                                   ),
                                 ),
                               ],
@@ -251,36 +248,54 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                           : Center(
                               child: Text(
                                 '$category: $count',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black87,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                     ),
-                    // ensure entries are always loaded and displayed here
                     children: entries.isNotEmpty
-                        ? entries
-                            .map((entry) => ListTile(
-                                  title: Text(
-                                    entry.text,
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
+                        ? [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: getLighterCategoryColor(
+                                          category, isDark),
+                                      borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(30),
+                                        bottomRight: Radius.circular(30),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: entries.map((entry) {
+                                        return ListTile(
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 16),
+                                          title: Text(
+                                            entry.text,
+                                            style: const TextStyle(
+                                                color: Colors.black87),
+                                          ),
+                                          subtitle: Text(
+                                            DateFormat('dd MMM, HH:mm')
+                                                .format(entry.timestamp),
+                                            style: const TextStyle(
+                                                color: Colors.black54),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
-                                  subtitle: Text(
-                                    DateFormat('dd MMM, HH:mm')
-                                        .format(entry.timestamp),
-                                    style: TextStyle(
-                                      color: isDark
-                                          ? Colors.white54
-                                          : Colors.black54,
-                                    ),
-                                  ),
-                                ))
-                            .toList()
+                                ),
+                                const SizedBox(width: 28),
+                              ],
+                            )
+                          ]
                         : [
                             const Padding(
                               padding: EdgeInsets.all(8),
@@ -298,6 +313,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     );
   }
 
+  // background expansion chip colour
   Color getCategoryColor(String category, bool isDark) {
     switch (category) {
       case 'Productive':
@@ -314,6 +330,26 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
         return isDark ? Colors.grey.shade700 : Colors.grey.shade400;
       default:
         return Colors.grey.shade200;
+    }
+  }
+
+  // background expansion chip entries colour
+  Color getLighterCategoryColor(String category, bool isDark) {
+    switch (category) {
+      case 'Productive':
+        return isDark ? Colors.blue.shade100 : Colors.blue.shade50;
+      case 'Maintenance':
+        return isDark ? Colors.grey.shade400 : Colors.grey.shade100;
+      case 'Wellbeing':
+        return isDark ? Colors.green.shade100 : Colors.green.shade50;
+      case 'Leisure':
+        return isDark ? Colors.purple.shade100 : Colors.purple.shade50;
+      case 'Social':
+        return isDark ? Colors.pink.shade100 : Colors.pink.shade50;
+      case 'Idle':
+        return isDark ? Colors.grey.shade600 : Colors.grey.shade300;
+      default:
+        return Colors.grey.shade100;
     }
   }
 }
