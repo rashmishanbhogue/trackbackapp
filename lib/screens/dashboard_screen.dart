@@ -5,7 +5,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
+import '../theme.dart';
 import '../providers/date_entries_provider.dart';
+import '../utils/time_utils.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -15,10 +17,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class DashboardScreenState extends ConsumerState<DashboardScreen> {
-  String viewType =
-      'Week'; // setting to week- can be day, week, month or year as default
+  String viewType = 'Week';
   DateTime referenceDate = DateTime.now();
-
   bool isBarChart = true;
 
   DateTimeRange getRange(String viewType, DateTime reference) {
@@ -32,7 +32,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
       case 'Week':
         final weekday = reference.weekday;
         final start = reference.subtract(Duration(days: weekday - 1));
-        final end = start.add(Duration(days: 6));
+        final end = start.add(const Duration(days: 6));
         return DateTimeRange(start: start, end: end);
       case 'Month':
         final start = DateTime(reference.year, reference.month, 1);
@@ -54,7 +54,11 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
     final dateEntries = ref.watch(dateEntriesProvider);
     final isDark = theme.brightness == Brightness.dark;
 
-    // map of date strings to entry counts
+    final selectedColor = theme.appBarTheme.iconTheme?.color ??
+        (isDark ? Colors.white : Colors.black);
+
+    final unselectedColor = isDark ? Colors.white38 : Colors.black38;
+
     final dataMap = <String, int>{};
     for (var entry in dateEntries.entries) {
       dataMap[entry.key] = entry.value.length;
@@ -68,9 +72,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
         leading: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode,
-            ),
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
             onPressed: () {
               ref.read(ThemeProvider.notifier).toggleTheme();
             },
@@ -85,8 +87,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
+                      builder: (context) => const SettingsScreen()),
                 );
               },
             ),
@@ -105,152 +106,265 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
             )
           : null,
       body: hasData
-          ? Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: isBarChart
-                  ? buildBarChart(context, dataMap)
-                  : buildPieChart(context, dataMap),
+          ? FutureBuilder<Map<String, dynamic>>(
+              future: calculateMetrics(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final metrics = snapshot.data!;
+                final timeOfDayCounts = metrics['times'] as Map<String, int>;
+
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isBarChart
+                                ? 'Entries Trend:'
+                                : 'Time of Day Distribution:',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline),
+                            onPressed: () => showBadgeLegend(context),
+                            tooltip: 'View Badge Details',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: DefaultTabController(
+                          length: 4,
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                width: 300,
+                                child: TabBar(
+                                  indicatorColor: Colors.transparent,
+                                  indicator: UnderlineTabIndicator(
+                                    borderSide: BorderSide(
+                                      color: selectedColor,
+                                      width: 3,
+                                    ),
+                                  ),
+                                  indicatorSize: TabBarIndicatorSize.tab,
+                                  labelColor: selectedColor,
+                                  unselectedLabelColor: unselectedColor,
+                                  labelStyle: const TextStyle(
+                                    fontFamily: 'SF Pro',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.42,
+                                    letterSpacing: 0.1,
+                                  ),
+                                  tabs: const [
+                                    Tab(text: 'Day'),
+                                    Tab(text: 'Week'),
+                                    Tab(text: 'Month'),
+                                    Tab(text: 'Year'),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: TabBarView(
+                                        children: List.generate(4, (_) {
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8),
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: isBarChart
+                                                  ? buildBarChart(
+                                                      context, dataMap)
+                                                  : buildTimeOfDayPieChart(
+                                                      context, timeOfDayCounts),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                    ),
+                                    const Divider(height: 32),
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16.0),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Time of Day Distribution:',
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ...timeOfDayCounts.entries
+                                                  .map((e) {
+                                                return Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 4),
+                                                  child: Text(
+                                                      '${e.key} : ${e.value}',
+                                                      style: const TextStyle(
+                                                          fontSize: 16)),
+                                                );
+                                              }).toList(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             )
           : const Center(
-              child: Text(
-                'No entries found yet.',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
+              child: Text('No entries found yet.',
+                  style: TextStyle(fontSize: 16))),
     );
+  }
+
+  Future<Map<String, dynamic>> calculateMetrics() async {
+    final dateEntriesMap = ref.read(dateEntriesProvider);
+    final allEntries = dateEntriesMap.values.expand((list) => list).toList();
+
+    Map<String, int> timeOfDayCounts = {
+      'Morning': 0,
+      'Afternoon': 0,
+      'Evening': 0,
+    };
+
+    for (final entry in allEntries) {
+      final block = getTimeOfDayBlock(entry.timestamp);
+      timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
+    }
+
+    return {'times': timeOfDayCounts, 'entries': {}};
   }
 
   Widget buildBarChart(BuildContext context, Map<String, int> data) {
     final sortedKeys = data.keys.toList()..sort();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Entries Trend:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () {
-                showBadgeLegend(context);
-              },
-              tooltip: 'View Badge Details',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        AspectRatio(
-          aspectRatio: 1,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: data.values.isEmpty
-                  ? 5
-                  : (data.values.reduce((a, b) => a > b ? a : b).toDouble() +
-                      1),
-              barTouchData: BarTouchData(enabled: true),
-              titlesData: FlTitlesData(
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (double value, meta) {
-                      final index = value.toInt();
-                      if (index >= sortedKeys.length)
-                        return const SizedBox.shrink();
-                      final date = DateFormat('dd/MM')
-                          .format(DateTime.parse(sortedKeys[index]));
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          date,
-                          style: const TextStyle(fontSize: 10),
-                        ),
-                      );
-                    },
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = 16.0;
+        final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
+        final targetBarCount = sortedKeys.length < 7 ? 7 : sortedKeys.length;
+        final barWidth = availableWidth / targetBarCount;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SizedBox(
+            height: constraints.maxHeight * 0.8,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: data.values.isEmpty
+                    ? 5
+                    : (data.values.reduce((a, b) => a > b ? a : b).toDouble() +
+                        1),
+                barTouchData: BarTouchData(enabled: true),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, _) {
+                        final index = value.toInt();
+                        if (index >= sortedKeys.length)
+                          return const SizedBox.shrink();
+                        final date = DateFormat('dd/MM')
+                            .format(DateTime.parse(sortedKeys[index]));
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child:
+                              Text(date, style: const TextStyle(fontSize: 10)),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, interval: 1),
                   ),
                 ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: true, interval: 1),
-                ),
+                barGroups: List.generate(sortedKeys.length, (index) {
+                  final count = data[sortedKeys[index]]!;
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: count.toDouble(),
+                        width: barWidth * 0.6,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  );
+                }),
               ),
-              barGroups: List.generate(sortedKeys.length, (index) {
-                final count = data[sortedKeys[index]]!;
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: count.toDouble(),
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                );
-              }),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget buildPieChart(BuildContext context, Map<String, int> data) {
+  Widget buildTimeOfDayPieChart(BuildContext context, Map<String, int> data) {
     final theme = Theme.of(context);
-    final groupedData = groupByBadge(data);
-    final total = groupedData.values.fold<int>(0, (a, b) => a + b);
+    final total = data.values.fold(0, (a, b) => a + b);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Badge Distribution:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () {
-                showBadgeLegend(context);
-              },
-              tooltip: 'View Badge Details',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Center(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.maxWidth;
+        final chartSize = size * 0.98;
+
+        return Center(
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.width * 0.9,
+            width: chartSize,
+            height: chartSize,
             child: PieChart(
               PieChartData(
-                sections: groupedData.entries
-                    .where((entry) => entry.value > 0)
-                    .map((entry) {
+                sections: data.entries.map((entry) {
+                  final total = data.values.fold(0, (a, b) => a + b);
                   final percentage = total > 0
                       ? ((entry.value / total) * 100).toStringAsFixed(1)
                       : '0.0';
                   return PieChartSectionData(
                     value: entry.value.toDouble(),
                     title: '$percentage%',
-                    color: getColorForBadge(entry.key),
+                    color: getColorForTimeOfDay(entry.key),
                     titleStyle: TextStyle(
                       fontSize: 16,
-                      color: theme.textTheme.bodyLarge?.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                       shadows: [
                         Shadow(
                           offset: Offset(0, 0),
                           blurRadius: 3,
                           color: Colors.black.withOpacity(0.5),
-                        )
+                        ),
                       ],
                     ),
                   );
@@ -260,56 +374,19 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  // group entry counts into badge categories
-  Map<String, int> groupByBadge(Map<String, int> data) {
-    final badgeGroups = <String, int>{
-      'Grey': 0,
-      'Yellow': 0,
-      'Green': 0,
-      'Blue': 0,
-      'Purple': 0,
-      'Red': 0,
-    };
-
-    for (var count in data.values) {
-      if (count == 0) {
-        badgeGroups['Grey'] = badgeGroups['Grey']! + 1;
-      } else if (count >= 20) {
-        badgeGroups['Red'] = badgeGroups['Red']! + 1;
-      } else if (count >= 15) {
-        badgeGroups['Purple'] = badgeGroups['Purple']! + 1;
-      } else if (count >= 10) {
-        badgeGroups['Blue'] = badgeGroups['Blue']! + 1;
-      } else if (count >= 5) {
-        badgeGroups['Green'] = badgeGroups['Green']! + 1;
-      } else {
-        badgeGroups['Yellow'] = badgeGroups['Yellow']! + 1;
-      }
-    }
-
-    return badgeGroups;
-  }
-
-  // map badge name to its assigned colour
-  Color getColorForBadge(String badgeName) {
-    switch (badgeName) {
-      case 'Grey':
-        return const Color(0xFFE2E1DD);
-      case 'Yellow':
-        return const Color(0xFFECD438);
-      case 'Green':
-        return const Color(0xFF3EEC38);
-      case 'Blue':
-        return const Color(0xFF38C5EC);
-      case 'Purple':
-        return const Color(0xFFAD38EC);
-      case 'Red':
-        return const Color(0xFFEC383B);
+  Color getColorForTimeOfDay(String block) {
+    switch (block) {
+      case 'Morning':
+        return Colors.orange.shade300;
+      case 'Afternoon':
+        return Colors.blue.shade300;
+      case 'Evening':
+        return Colors.purple.shade300;
       default:
         return Colors.grey;
     }
