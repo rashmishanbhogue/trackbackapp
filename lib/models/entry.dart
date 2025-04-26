@@ -33,4 +33,12 @@ class Entry {
         label: json['label'],
         timestamp: DateTime.parse(json['timestamp']),
       );
+
+  Entry copyWith({String? text, DateTime? timestamp, String? label}) {
+    return Entry(
+      text: text ?? this.text,
+      timestamp: timestamp ?? this.timestamp,
+      label: label ?? this.label,
+    );
+  }
 }

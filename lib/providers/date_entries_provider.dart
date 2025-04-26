@@ -132,4 +132,15 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     );
     box.put('entries', state);
   }
+
+  void replaceAll(Map<String, List<Entry>> newEntries) {
+    state = newEntries;
+    final storedMap = state.map(
+      (key, value) => MapEntry(
+        key,
+        value.map((entry) => jsonEncode(entry.toJson())).toList(),
+      ),
+    );
+    box.put('entries', storedMap);
+  }
 }
