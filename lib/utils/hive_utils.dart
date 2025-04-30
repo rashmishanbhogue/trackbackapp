@@ -1,3 +1,5 @@
+// hive_utils.dart
+
 import 'package:hive/hive.dart';
 
 Future<void> storeLabelsInHive(Map<String, int> labelCounts) async {
