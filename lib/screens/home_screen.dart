@@ -28,7 +28,6 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     controller = TextEditingController();
-    print('TextEditingController initialized');
   }
 
   @override
@@ -96,7 +95,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: const SizedBox(height: 10)),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
               SliverToBoxAdapter(
                 child: TextField(
                   controller: controller,
@@ -122,7 +121,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: const SizedBox(height: 20)),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (BuildContext context, int index) {
@@ -131,12 +130,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   childCount: 1,
                 ),
               ),
-              SliverToBoxAdapter(child: const SizedBox(height: 20)),
-              SliverToBoxAdapter(
-                child:
-                    const Text("Previous Days", style: TextStyle(fontSize: 20)),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              const SliverToBoxAdapter(
+                child: Text("Previous Days", style: TextStyle(fontSize: 20)),
               ),
-              SliverToBoxAdapter(child: const SizedBox(height: 10)),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (BuildContext context, int index) {
