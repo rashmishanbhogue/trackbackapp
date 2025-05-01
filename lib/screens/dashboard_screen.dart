@@ -1,3 +1,5 @@
+// dashboard_screen.dart, display bar charts for total entries and pie charts for badges earned
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -5,9 +7,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
-import '../theme.dart';
 import '../providers/date_entries_provider.dart';
 import '../utils/time_utils.dart';
+import '../models/entry.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -16,36 +18,209 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => DashboardScreenState();
 }
 
-class DashboardScreenState extends ConsumerState<DashboardScreen> {
-  String viewType = 'Week';
+class DashboardScreenState extends ConsumerState<DashboardScreen>
+    with TickerProviderStateMixin {
+  String viewType = 'Day';
   DateTime referenceDate = DateTime.now();
   bool isBarChart = true;
+  late TabController tabController;
+  late DateTime selectedDate;
 
-  DateTimeRange getRange(String viewType, DateTime reference) {
+  @override
+  void initState() {
+    super.initState();
+    selectedDate = DateTime.now();
+    tabController = TabController(length: 4, vsync: this);
+    tabController.addListener(() {
+      setState(() {
+        switch (tabController.index) {
+          case 0:
+            viewType = 'Day';
+            break;
+          case 1:
+            viewType = 'Week';
+            break;
+          case 2:
+            viewType = 'Month';
+            break;
+          case 3:
+            viewType = 'Year';
+            break;
+        }
+        updateReferenceDate();
+      });
+    });
+    updateReferenceDate();
+  }
+
+  void updateReferenceDate() {
+    final now = DateTime.now();
     switch (viewType) {
       case 'Day':
-        return DateTimeRange(
-          start: DateTime(reference.year, reference.month, reference.day),
-          end: DateTime(
-              reference.year, reference.month, reference.day, 23, 59, 59),
-        );
+        referenceDate = DateTime(now.year, now.month, now.day);
+        break;
       case 'Week':
-        final weekday = reference.weekday;
-        final start = reference.subtract(Duration(days: weekday - 1));
-        final end = start.add(const Duration(days: 6));
-        return DateTimeRange(start: start, end: end);
+        referenceDate = now.subtract(Duration(days: now.weekday - 1));
+        break;
       case 'Month':
-        final start = DateTime(reference.year, reference.month, 1);
-        final end = DateTime(reference.year, reference.month + 1, 0);
-        return DateTimeRange(start: start, end: end);
+        referenceDate = DateTime(now.year, now.month);
+        break;
       case 'Year':
-        return DateTimeRange(
-          start: DateTime(reference.year, 1, 1),
-          end: DateTime(reference.year, 12, 31),
-        );
-      default:
-        throw Exception('Invalid viewType');
+        referenceDate = DateTime(now.year);
+        break;
     }
+  }
+
+  DateTime getFirstEntryDate() {
+    final dateEntriesMap = ref.read(dateEntriesProvider);
+    final allEntries = dateEntriesMap.values.expand((list) => list).toList();
+
+    if (allEntries.isEmpty) return DateTime.now();
+
+    return allEntries
+        .reduce((a, b) => a.timestamp.isBefore(b.timestamp) ? a : b)
+        .timestamp;
+  }
+
+  void moveReferenceDate(int direction) {
+    setState(() {
+      debugPrint(
+          'Moving referenceDate. Current referenceDate: $referenceDate, Direction: $direction');
+
+      if (viewType == 'Day') {
+        referenceDate = referenceDate.add(Duration(days: direction));
+        debugPrint('New referenceDate for Day: $referenceDate');
+      } else if (viewType == 'Week') {
+        referenceDate = referenceDate.add(Duration(days: 7 * direction));
+        debugPrint('New referenceDate for Week: $referenceDate');
+      } else if (viewType == 'Month') {
+        referenceDate =
+            DateTime(referenceDate.year, referenceDate.month + direction);
+        debugPrint('New referenceDate for Month: $referenceDate');
+      } else if (viewType == 'Year') {
+        referenceDate = DateTime(referenceDate.year + direction);
+        debugPrint('New referenceDate for Year: $referenceDate');
+      }
+    });
+  }
+
+  String getDisplayText() {
+    final now = DateTime.now();
+
+    if (viewType == 'Day') {
+      if (referenceDate.year == now.year &&
+          referenceDate.month == now.month &&
+          referenceDate.day == now.day) {
+        return 'Today';
+      } else if (referenceDate.year == now.year &&
+          referenceDate.month == now.month &&
+          referenceDate.day == now.day - 1) {
+        return 'Yesterday';
+      } else {
+        return DateFormat('dd MMM').format(referenceDate);
+      }
+    } else if (viewType == 'Week') {
+      final startOfWeek =
+          referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
+      final endOfWeek = startOfWeek.add(const Duration(days: 6));
+      if (startOfWeek.isBefore(now) && now.isBefore(endOfWeek)) {
+        return 'This Week';
+      } else {
+        return '${DateFormat('dd MMM').format(startOfWeek)} - ${DateFormat('dd MMM').format(endOfWeek)}';
+      }
+    } else if (viewType == 'Month') {
+      if (referenceDate.year == now.year && referenceDate.month == now.month) {
+        return 'This Month';
+      } else {
+        return DateFormat('MMMM').format(referenceDate);
+      }
+    } else if (viewType == 'Year') {
+      return referenceDate.year.toString();
+    }
+    return '';
+  }
+
+  bool canMoveBack() {
+    // final now = DateTime.now();
+    final firstEntryDate = getFirstEntryDate();
+
+    if (viewType == 'Day') {
+      debugPrint('value of firstEntryDate: $firstEntryDate');
+      return referenceDate.isAfter(firstEntryDate);
+    }
+
+    if (viewType == 'Week') {
+      final startOfWeek =
+          referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
+      debugPrint('value of startOfWeek: $startOfWeek');
+
+      return startOfWeek.isAfter(firstEntryDate);
+    }
+
+    if (viewType == 'Month') {
+      final startOfMonth = DateTime(referenceDate.year, referenceDate.month, 1);
+      debugPrint('value of startOfMonth: $startOfMonth');
+
+      return startOfMonth.isAfter(firstEntryDate);
+    }
+
+    if (viewType == 'Year') {
+      final startOfYear = DateTime(referenceDate.year, 1, 1);
+      debugPrint('value of startOfYear: $startOfYear');
+
+      return startOfYear.isAfter(firstEntryDate);
+    }
+
+    return false;
+  }
+
+  bool canMoveForward() {
+    final now = DateTime.now();
+    debugPrint(
+        'Checking if we can move forward. Current referenceDate: $referenceDate');
+
+    if (viewType == 'Day') {
+      final today = DateTime(now.year, now.month, now.day);
+
+      debugPrint('value of today for Day is: $today');
+      return referenceDate.isBefore(today);
+    }
+
+    if (viewType == 'Week') {
+      final startOfWeek = referenceDate.subtract(
+          Duration(days: referenceDate.weekday - 1)); // start week mon
+      debugPrint('Start of week: $startOfWeek');
+      final endOfWeek = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day + 6, // sunday of the current week
+        23, 59, 59, 999, // last moment of sunday
+      ); // end week sun
+      debugPrint('End of week: $endOfWeek');
+      debugPrint('Today\'s date: $now');
+      debugPrint('Can move forward?: ${endOfWeek.isBefore(now)}');
+
+      final canMove = endOfWeek.isBefore(now);
+      debugPrint(
+          'Can move forward in Week view: $canMove (startOfWeek: $startOfWeek, endOfWeek: $endOfWeek)');
+      return canMove;
+    }
+
+    if (viewType == 'Month') {
+      final canMove = referenceDate.year < now.year ||
+          (referenceDate.year == now.year && referenceDate.month < now.month);
+      debugPrint('Can move forward in Month view: $canMove');
+      return canMove;
+    }
+
+    if (viewType == 'Year') {
+      final canMove = referenceDate.year < now.year;
+      debugPrint('Can move forward in Year view: $canMove');
+      return canMove;
+    }
+
+    debugPrint('Default return: false');
+    return false;
   }
 
   @override
@@ -56,7 +231,6 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final selectedColor = theme.appBarTheme.iconTheme?.color ??
         (isDark ? Colors.white : Colors.black);
-
     final unselectedColor = isDark ? Colors.white38 : Colors.black38;
 
     final dataMap = <String, int>{};
@@ -107,14 +281,19 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
           : null,
       body: hasData
           ? FutureBuilder<Map<String, dynamic>>(
-              future: calculateMetrics(),
+              future: calculateMetrics(viewType, selectedDate: referenceDate),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 final metrics = snapshot.data!;
-                final timeOfDayCounts = metrics['times'] as Map<String, int>;
+                final List<Entry> entries = metrics['entries'] as List<Entry>;
+
+                final badgeCountMap = calculateBadgeCount(entries, viewType,
+                    selectedDate: referenceDate);
+
+                final timeOfDayCounts = snapshot.data?['times'] ?? {};
 
                 return Padding(
                   padding:
@@ -128,7 +307,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                           Text(
                             isBarChart
                                 ? 'Entries Trend:'
-                                : 'Time of Day Distribution:',
+                                : 'Badge Distribution:',
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold),
                           ),
@@ -145,17 +324,46 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Expanded(
                         child: DefaultTabController(
                           length: 4,
+                          initialIndex: 0,
                           child: Column(
                             children: [
                               SizedBox(
                                 width: 300,
                                 child: TabBar(
+                                  controller: tabController,
+                                  onTap: (index) {
+                                    final now = DateTime.now();
+                                    setState(() {
+                                      if (index == 0) {
+                                        viewType = 'Day';
+                                        referenceDate = DateTime(
+                                            now.year, now.month, now.day);
+                                        debugPrint(
+                                            'Switched to Day Tab: referenceDate = $referenceDate');
+                                      } else if (index == 1) {
+                                        viewType = 'Week';
+                                        referenceDate = now.subtract(
+                                            Duration(days: now.weekday - 1));
+                                        debugPrint(
+                                            'Switched to Week Tab: referenceDate = $referenceDate');
+                                      } else if (index == 2) {
+                                        viewType = 'Month';
+                                        referenceDate =
+                                            DateTime(now.year, now.month);
+                                        debugPrint(
+                                            'Switched to Month Tab: referenceDate = $referenceDate');
+                                      } else if (index == 3) {
+                                        viewType = 'Year';
+                                        referenceDate = DateTime(now.year);
+                                        debugPrint(
+                                            'Switched to Year Tab: referenceDate = $referenceDate');
+                                      }
+                                    });
+                                  },
                                   indicatorColor: Colors.transparent,
                                   indicator: UnderlineTabIndicator(
                                     borderSide: BorderSide(
-                                      color: selectedColor,
-                                      width: 3,
-                                    ),
+                                        color: selectedColor, width: 3),
                                   ),
                                   indicatorSize: TabBarIndicatorSize.tab,
                                   labelColor: selectedColor,
@@ -176,64 +384,92 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              Expanded(
-                                child: Column(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Expanded(
-                                      child: TabBarView(
-                                        children: List.generate(4, (_) {
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8),
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: isBarChart
-                                                  ? buildBarChart(
-                                                      context, dataMap)
-                                                  : buildTimeOfDayPieChart(
-                                                      context, timeOfDayCounts),
-                                            ),
-                                          );
-                                        }),
+                                    IconButton(
+                                      onPressed: canMoveBack()
+                                          ? () => moveReferenceDate(-1)
+                                          : null,
+                                      icon: const Icon(Icons.arrow_left),
+                                    ),
+                                    Text(
+                                      getDisplayText(),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const Divider(height: 32),
-                                    Expanded(
-                                      child: SingleChildScrollView(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 16.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                'Time of Day Distribution:',
-                                                style: TextStyle(
-                                                    fontSize: 18,
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              ...timeOfDayCounts.entries
-                                                  .map((e) {
-                                                return Padding(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 4),
-                                                  child: Text(
-                                                      '${e.key} : ${e.value}',
-                                                      style: const TextStyle(
-                                                          fontSize: 16)),
-                                                );
-                                              }).toList(),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
+                                    IconButton(
+                                      onPressed: canMoveForward()
+                                          ? () => moveReferenceDate(1)
+                                          : null,
+                                      icon: const Icon(Icons.arrow_right),
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(height: 12),
+                              Expanded(
+                                child: TabBarView(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: List.generate(4, (_) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: isBarChart
+                                            ? buildBarChart(
+                                                context, entries, viewType)
+                                            : buildPieChart(context,
+                                                badgeCountMap, viewType),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Divider(height: 16),
+                              const SizedBox(height: 16),
+                              const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Time of Day Distribution:',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    'Morning',
+                                    'Afternoon',
+                                    'Evening',
+                                    'Night'
+                                  ].map((period) {
+                                    final count = timeOfDayCounts[period] ?? 0;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
+                                      child: Text(
+                                        '$period : $count',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                             ],
                           ),
                         ),
@@ -244,102 +480,445 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
               },
             )
           : const Center(
-              child: Text('No entries found yet.',
-                  style: TextStyle(fontSize: 16))),
+              child:
+                  Text('No entries found yet.', style: TextStyle(fontSize: 16)),
+            ),
     );
   }
 
-  Future<Map<String, dynamic>> calculateMetrics() async {
+  Future<Map<String, dynamic>> calculateMetrics(String viewType,
+      {DateTime? selectedDate}) async {
     final dateEntriesMap = ref.read(dateEntriesProvider);
-    final allEntries = dateEntriesMap.values.expand((list) => list).toList();
+
+    final allEntries = dateEntriesMap.values
+        .where((list) => list.isNotEmpty)
+        .expand((list) => list)
+        .toList();
+
+    final filteredEntries = filterEntriesByViewType(allEntries, viewType,
+        selectedDate: selectedDate);
 
     Map<String, int> timeOfDayCounts = {
       'Morning': 0,
       'Afternoon': 0,
       'Evening': 0,
+      'Night': 0,
     };
 
-    for (final entry in allEntries) {
-      final block = getTimeOfDayBlock(entry.timestamp);
-      timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
+    if (filteredEntries.isNotEmpty) {
+      for (final entry in filteredEntries) {
+        final block = getTimeOfDayBlock(entry.timestamp);
+        timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
+      }
     }
 
-    return {'times': timeOfDayCounts, 'entries': {}};
+    return {
+      'times': timeOfDayCounts,
+      'entries': filteredEntries,
+    };
   }
 
-  Widget buildBarChart(BuildContext context, Map<String, int> data) {
-    final sortedKeys = data.keys.toList()..sort();
+  Map<String, int> buildBadgeCountMap(List<Entry> entries, String viewType,
+      {DateTime? selectedDate}) {
+    final filteredEntries =
+        filterEntriesByViewType(entries, viewType, selectedDate: selectedDate);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontalPadding = 16.0;
-        final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
-        final targetBarCount = sortedKeys.length < 7 ? 7 : sortedKeys.length;
-        final barWidth = availableWidth / targetBarCount;
+    Map<String, List<Entry>> groupedEntries = {};
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: SizedBox(
-            height: constraints.maxHeight * 0.8,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: data.values.isEmpty
-                    ? 5
-                    : (data.values.reduce((a, b) => a > b ? a : b).toDouble() +
-                        1),
-                barTouchData: BarTouchData(enabled: true),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, _) {
-                        final index = value.toInt();
-                        if (index >= sortedKeys.length)
-                          return const SizedBox.shrink();
-                        final date = DateFormat('dd/MM')
-                            .format(DateTime.parse(sortedKeys[index]));
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child:
-                              Text(date, style: const TextStyle(fontSize: 10)),
-                        );
-                      },
+    for (var entry in filteredEntries) {
+      String key;
+
+      switch (viewType) {
+        case 'Day':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Week':
+          final weekStart = DateTime(entry.timestamp.year,
+                  entry.timestamp.month, entry.timestamp.day)
+              .subtract(Duration(days: entry.timestamp.weekday - 1));
+          key = DateFormat('yyyy-MM-dd').format(weekStart);
+          break;
+        case 'Month':
+          key = DateFormat('yyyy-MM').format(entry.timestamp);
+          break;
+        case 'Year':
+          key = DateFormat('yyyy').format(entry.timestamp);
+          break;
+        default:
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+      }
+
+      groupedEntries.putIfAbsent(key, () => []).add(entry);
+    }
+
+    Map<String, int> badgeCountMap = {};
+
+    for (var group in groupedEntries.values) {
+      int totalEntries = group.length;
+      String badge = getBadgeForEntries(totalEntries);
+
+      badgeCountMap[badge] = (badgeCountMap[badge] ?? 0) + 1;
+    }
+
+    return badgeCountMap;
+  }
+
+  Map<String, int> calculateBadgeCount(
+    List<Entry> entries,
+    String viewType, {
+    DateTime? selectedDate,
+  }) {
+    Map<String, int> badgeCountMap = {
+      'Yellow': 0,
+      'Green': 0,
+      'Blue': 0,
+      'Purple': 0,
+      'Red': 0,
+      'Grey': 0,
+    };
+
+    // filter by the selected range (Day, Week, Month, Year)
+    final filteredEntries =
+        filterEntriesByViewType(entries, viewType, selectedDate: selectedDate);
+    if (filteredEntries.isEmpty) return badgeCountMap;
+
+    // group by day (not by week/month/year)
+    Map<String, List<Entry>> entriesGroupedByDay = {};
+    for (final entry in filteredEntries) {
+      final dayKey = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+      entriesGroupedByDay.putIfAbsent(dayKey, () => []).add(entry);
+    }
+
+    // count how many of each badge appears in the period
+    for (final group in entriesGroupedByDay.values) {
+      final count = group.length;
+      final badge = getBadgeForEntries(count);
+      badgeCountMap[badge] = (badgeCountMap[badge] ?? 0) + 1;
+    }
+
+    return badgeCountMap;
+  }
+
+  String getBadgeForEntries(int totalEntries) {
+    if (totalEntries == 0) return 'Grey'; // 0 entries, grey
+    if (totalEntries >= 20) return 'Red'; // 20 or more entries, red
+    if (totalEntries >= 15) return 'Purple'; // 15-19 entries, purple
+    if (totalEntries >= 10) return 'Blue'; // 10-14 entries, blue
+    if (totalEntries >= 5) return 'Green'; // 5-9 entries, green
+    return 'Yellow'; // 1-4 entries, yellow
+  }
+
+  List<Entry> filterEntriesByViewType(List<Entry> entries, String viewType,
+      {DateTime? selectedDate}) {
+    final now = selectedDate ?? DateTime.now();
+    List<Entry> filteredEntries = [];
+
+    switch (viewType) {
+      case 'Day':
+        filteredEntries = entries.where((entry) {
+          final ts = entry.timestamp;
+          return ts.year == now.year &&
+              ts.month == now.month &&
+              ts.day == now.day;
+        }).toList();
+        break;
+
+      case 'Week':
+        final startOfWeek = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        filteredEntries = entries.where((entry) {
+          final ts = entry.timestamp;
+          return ts.isAfter(startOfWeek.subtract(const Duration(seconds: 1))) &&
+              ts.isBefore(endOfWeek.add(const Duration(days: 1)));
+        }).toList();
+        break;
+
+      case 'Month':
+        filteredEntries = entries.where((entry) {
+          final ts = entry.timestamp;
+          return ts.year == now.year && ts.month == now.month;
+        }).toList();
+        break;
+
+      case 'Year':
+        filteredEntries = entries.where((entry) {
+          final ts = entry.timestamp;
+          return ts.year == now.year;
+        }).toList();
+        break;
+    }
+
+    return filteredEntries;
+  }
+
+  Widget buildBarChart(
+    BuildContext context,
+    List<Entry> entries,
+    String viewType,
+  ) {
+    final theme = Theme.of(context);
+    final now = referenceDate;
+    List<String> xLabels = [];
+    List<int> yValues = [];
+
+    final filteredEntries =
+        filterEntriesByViewType(entries, viewType, selectedDate: referenceDate);
+
+    // aggregation
+    final Map<String, int> data = {};
+    for (var entry in filteredEntries) {
+      String key;
+      switch (viewType) {
+        case 'Day':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Week':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Month':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Year':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        default:
+          key = '';
+      }
+      if (key.isNotEmpty) {
+        data[key] = (data[key] ?? 0) + 1;
+      }
+    }
+
+    void addBar(String label, int count) {
+      xLabels.add(label);
+      yValues.add(count);
+    }
+
+    // bars
+    switch (viewType) {
+      case 'Day':
+        final today = DateFormat('yyyy-MM-dd').format(now);
+        final count = data[today] ?? 0;
+        addBar(DateFormat('dd/MM').format(now), count);
+        break;
+
+      case 'Week':
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        for (int i = 0; i < 7; i++) {
+          final date = startOfWeek.add(Duration(days: i));
+          final key = DateFormat('yyyy-MM-dd').format(date);
+          final label = DateFormat('E').format(date);
+          addBar(label, data[key] ?? 0);
+        }
+        break;
+
+      case 'Month':
+        final firstOfMonth = DateTime(now.year, now.month, 1);
+        final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+        final numWeeks = ((firstOfMonth.weekday - 1 + daysInMonth) / 7).ceil();
+
+        for (int i = 0; i < numWeeks; i++) {
+          int weekTotal = 0;
+          for (int j = 0; j < 7; j++) {
+            final day = firstOfMonth.add(Duration(days: i * 7 + j));
+            if (day.month != now.month) break;
+            final key = DateFormat('yyyy-MM-dd').format(day);
+            weekTotal += data[key] ?? 0;
+          }
+          addBar('W${i + 1}', weekTotal);
+        }
+        break;
+
+      case 'Year':
+        for (int i = 1; i <= 12; i++) {
+          int monthTotal = 0;
+          final firstDay = DateTime(now.year, i, 1);
+          final daysInMonth = DateTime(now.year, i + 1, 0).day;
+          for (int d = 1; d <= daysInMonth; d++) {
+            final day = DateTime(now.year, i, d);
+            final key = DateFormat('yyyy-MM-dd').format(day);
+            monthTotal += data[key] ?? 0;
+          }
+          addBar(DateFormat('MMM').format(firstDay), monthTotal);
+        }
+        break;
+
+      default:
+        return const Center(child: Text('Invalid view type'));
+    }
+
+    final maxY = yValues.isEmpty
+        ? 5.0
+        : (yValues.reduce((a, b) => a > b ? a : b)).toDouble() + 1.0;
+
+    return LayoutBuilder(builder: (context, constraints) {
+      const horizontalPadding = 16.0;
+      final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
+      final barWidth =
+          availableWidth / (xLabels.length < 7 ? 7 : xLabels.length);
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: SizedBox(
+          height: constraints.maxHeight * 0.8,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxY,
+                  barTouchData: BarTouchData(enabled: true),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          final index = value.toInt();
+                          if (index >= xLabels.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(xLabels[index],
+                                style: const TextStyle(fontSize: 10)),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: true, interval: 1),
                     ),
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, interval: 1),
-                  ),
+                  barGroups: List.generate(xLabels.length, (index) {
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: yValues[index].toDouble(),
+                          width: barWidth * 0.6,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    );
+                  }),
                 ),
-                barGroups: List.generate(sortedKeys.length, (index) {
-                  final count = data[sortedKeys[index]]!;
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: count.toDouble(),
-                        width: barWidth * 0.6,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ],
-                  );
-                }),
               ),
-            ),
+              if (yValues.every((y) => y == 0))
+                Text(
+                  () {
+                    switch (viewType) {
+                      case 'Day':
+                        return 'No entries for this day';
+                      case 'Week':
+                        return 'No entries for this week';
+                      case 'Month':
+                        return 'No entries for this month';
+                      case 'Year':
+                        return 'No entries for this year';
+                      default:
+                        return 'No data';
+                    }
+                  }(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 
-  Widget buildTimeOfDayPieChart(BuildContext context, Map<String, int> data) {
+  Widget buildPieChart(
+    BuildContext context,
+    Map<String, int> badgeCountMap,
+    String viewType,
+  ) {
     final theme = Theme.of(context);
-    final total = data.values.fold(0, (a, b) => a + b);
+    final total = badgeCountMap.values.fold(0, (a, b) => a + b);
+
+    debugPrint('--- Pie Chart Debug ---');
+    debugPrint('Total entries: $total');
+    debugPrint('Badge Count Map: $badgeCountMap');
+
+    if (total == 0) {
+      final greyColor = getColorForBadge('Grey');
+      final noDataMessage = () {
+        switch (viewType) {
+          case 'Day':
+            return 'No entries for this day';
+          case 'Week':
+            return 'No entries for this week';
+          case 'Month':
+            return 'No entries for this month';
+          case 'Year':
+            return 'No entries for this year';
+          default:
+            return 'No data';
+        }
+      }();
+
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.maxWidth;
+          final chartSize = size * 0.8;
+
+          return Center(
+            child: SizedBox(
+              width: chartSize,
+              height: chartSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sections: [
+                        PieChartSectionData(
+                          value: 1,
+                          color: greyColor,
+                          title: '',
+                        ),
+                      ],
+                      centerSpaceRadius: 30,
+                      sectionsSpace: 2,
+                    ),
+                  ),
+                  Text(
+                    noDataMessage,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    final validEntries =
+        badgeCountMap.entries.where((entry) => entry.value > 0).toList();
+
+    debugPrint('Valid (non-zero) badge entries: ${validEntries.length}');
+    for (final e in validEntries) {
+      final percentage = (e.value / total) * 100;
+      debugPrint(
+        'Badge: ${e.key}, Count: ${e.value}, Percentage: ${percentage.toStringAsFixed(1)}%',
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.maxWidth;
-        final chartSize = size * 0.98;
+        final chartSize = size * 0.8;
 
         return Center(
           child: SizedBox(
@@ -347,21 +926,18 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
             height: chartSize,
             child: PieChart(
               PieChartData(
-                sections: data.entries.map((entry) {
-                  final total = data.values.fold(0, (a, b) => a + b);
-                  final percentage = total > 0
-                      ? ((entry.value / total) * 100).toStringAsFixed(1)
-                      : '0.0';
+                sections: validEntries.map((entry) {
+                  final percentage = (entry.value / total) * 100;
                   return PieChartSectionData(
                     value: entry.value.toDouble(),
-                    title: '$percentage%',
-                    color: getColorForTimeOfDay(entry.key),
+                    title: '${percentage.toStringAsFixed(1)}%',
+                    color: getColorForBadge(entry.key),
                     titleStyle: TextStyle(
                       fontSize: 16,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                      color: theme.textTheme.bodyLarge?.color,
                       shadows: [
                         Shadow(
-                          offset: Offset(0, 0),
+                          offset: const Offset(0, 0),
                           blurRadius: 3,
                           color: Colors.black.withOpacity(0.5),
                         ),
@@ -370,7 +946,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                   );
                 }).toList(),
                 sectionsSpace: 2,
-                centerSpaceRadius: 40,
+                centerSpaceRadius: 30,
               ),
             ),
           ),
@@ -379,16 +955,20 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Color getColorForTimeOfDay(String block) {
-    switch (block) {
-      case 'Morning':
-        return Colors.orange.shade300;
-      case 'Afternoon':
-        return Colors.blue.shade300;
-      case 'Evening':
-        return Colors.purple.shade300;
+  Color getColorForBadge(String badge) {
+    switch (badge) {
+      case 'Yellow':
+        return const Color(0xFFECD438);
+      case 'Green':
+        return const Color(0xFF3EEC38);
+      case 'Blue':
+        return const Color(0xFF38C5EC);
+      case 'Purple':
+        return const Color(0xFFAD38EC);
+      case 'Red':
+        return const Color(0xFFEC383B);
       default:
-        return Colors.grey;
+        return const Color(0xFFE2E1DD);
     }
   }
 
@@ -408,7 +988,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
-                  '🚀 Earn Badges!',
+                  '🚀  Earn Badges!',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -420,28 +1000,28 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     for (var entry in [
                       {
-                        'asset': 'assets/badges/badge_0.svg',
-                        'label': '0 entries'
+                        'asset': 'assets/badges/badge_0.svg', // grey
+                        'label': '0 entries' // grey
                       },
                       {
-                        'asset': 'assets/badges/badge_1.svg',
-                        'label': '1–4 entries'
+                        'asset': 'assets/badges/badge_1.svg', // yellow
+                        'label': '1–4 entries' // yellow
                       },
                       {
-                        'asset': 'assets/badges/badge_2.svg',
-                        'label': '5–9 entries'
+                        'asset': 'assets/badges/badge_2.svg', // green
+                        'label': '5–9 entries' // green
                       },
                       {
-                        'asset': 'assets/badges/badge_3.svg',
-                        'label': '10–14 entries'
+                        'asset': 'assets/badges/badge_3.svg', // blue
+                        'label': '10–14 entries' // blue
                       },
                       {
-                        'asset': 'assets/badges/badge_4.svg',
-                        'label': '15–19 entries'
+                        'asset': 'assets/badges/badge_4.svg', // purple
+                        'label': '15–19 entries' // purple
                       },
                       {
-                        'asset': 'assets/badges/badge_5.svg',
-                        'label': '20+ entries'
+                        'asset': 'assets/badges/badge_5.svg', // red
+                        'label': '20+ entries' // red
                       },
                     ])
                       Padding(

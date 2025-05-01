@@ -1,8 +1,8 @@
+// settings_screen.dart, login, sso, delete all, etc.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
-import '../providers/date_entries_provider.dart';
-import '../theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

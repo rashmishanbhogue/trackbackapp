@@ -1,6 +1,7 @@
+// data_entries_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../models/entry.dart';
 import '../utils/hive_utils.dart';
@@ -107,13 +108,6 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
 
     state = updatedEntries;
 
-    final storedMap = updatedEntries.map(
-      (key, value) => MapEntry(
-        key,
-        value.map((entry) => jsonEncode(entry.toJson())).toList(),
-      ),
-    );
-
     box.put('entries', state);
   }
 
@@ -124,12 +118,6 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
 
     state = updatedEntries;
 
-    final storedMap = updatedEntries.map(
-      (key, value) => MapEntry(
-        key,
-        value.map((entry) => jsonEncode(entry.toJson())).toList(),
-      ),
-    );
     box.put('entries', state);
   }
 
