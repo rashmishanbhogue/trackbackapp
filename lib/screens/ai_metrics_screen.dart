@@ -8,6 +8,9 @@ import '../models/entry.dart';
 import '../utils/ai_labeling.dart';
 import '../utils/hive_utils.dart';
 import '../utils/constants.dart';
+import '../theme.dart';
+
+enum TimeFilter { all, day, week, month, year }
 
 class AiMetricsScreen extends ConsumerStatefulWidget {
   const AiMetricsScreen({super.key});
@@ -21,6 +24,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   Map<String, int> labelCounts = {};
   Map<String, List<Entry>> labelToEntries = {};
   DateTime? lastUpdated;
+  TimeFilter selectedFilter = TimeFilter.all;
 
   @override
   void initState() {
@@ -187,7 +191,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                 'AI Categorised Labels:',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 15),
+              buildFilterChips(theme, isDark),
+              const SizedBox(height: 8),
               Center(
                 child: Text(
                   lastUpdated != null
@@ -199,7 +204,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               ...standardCategories.map((category) {
                 final count = labelCounts[category] ?? 0;
                 final entries = labelToEntries[category] ?? [];
@@ -233,8 +238,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(width: 15),
-                                SizedBox(
+                                // const SizedBox(width: 15),
+                                const SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
@@ -305,7 +310,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                           ],
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -317,39 +322,116 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   Color getCategoryColor(String category, bool isDark) {
     switch (category) {
       case 'Productive':
-        return isDark ? Colors.blue.shade200 : Colors.blue.shade100;
+        return isDark ? AppTheme.productiveDark : AppTheme.productiveLight;
       case 'Maintenance':
-        return isDark ? Colors.grey.shade500 : Colors.grey.shade200;
+        return isDark ? AppTheme.maintenanceDark : AppTheme.maintenanceLight;
       case 'Wellbeing':
-        return isDark ? Colors.green.shade200 : Colors.green.shade100;
+        return isDark ? AppTheme.wellbeingDark : AppTheme.wellbeingLight;
       case 'Leisure':
-        return isDark ? Colors.purple.shade200 : Colors.purple.shade100;
+        return isDark ? AppTheme.leisureDark : AppTheme.leisureLight;
       case 'Social':
-        return isDark ? Colors.pink.shade200 : Colors.pink.shade100;
+        return isDark ? AppTheme.socialDark : AppTheme.socialLight;
       case 'Idle':
-        return isDark ? Colors.grey.shade700 : Colors.grey.shade400;
+        return isDark ? AppTheme.idleDark : AppTheme.idleLight;
       default:
         return Colors.grey.shade200;
     }
   }
 
-  // background expansion chip entries colour
+  // background expansion chip entries lighter colour
   Color getLighterCategoryColor(String category, bool isDark) {
     switch (category) {
       case 'Productive':
-        return isDark ? Colors.blue.shade100 : Colors.blue.shade50;
+        return isDark
+            ? AppTheme.productiveDarkest
+            : AppTheme.productiveLightest;
       case 'Maintenance':
-        return isDark ? Colors.grey.shade400 : Colors.grey.shade100;
+        return isDark
+            ? AppTheme.maintenanceDarkest
+            : AppTheme.maintenanceLightest;
       case 'Wellbeing':
-        return isDark ? Colors.green.shade100 : Colors.green.shade50;
+        return isDark
+            ? AppTheme.maintenanceDarkest
+            : AppTheme.wellbeingLightest;
       case 'Leisure':
-        return isDark ? Colors.purple.shade100 : Colors.purple.shade50;
+        return isDark ? AppTheme.leisureDarkest : AppTheme.leisureLightest;
       case 'Social':
-        return isDark ? Colors.pink.shade100 : Colors.pink.shade50;
+        return isDark ? AppTheme.socialDarkest : AppTheme.socialLightest;
       case 'Idle':
-        return isDark ? Colors.grey.shade600 : Colors.grey.shade300;
+        return isDark ? AppTheme.idleDarkest : AppTheme.idleLightest;
       default:
         return Colors.grey.shade100;
     }
+  }
+
+  Widget buildFilterChips(ThemeData theme, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: TimeFilter.values.map((filter) {
+              final isSelected = selectedFilter == filter;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: RawChip(
+                  label: Text(
+                    filter.name.toUpperCase(),
+                    style: TextStyle(
+                      color: isSelected
+                          ? (isDark ? Colors.white : Colors.black)
+                          : Colors.grey[600],
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        selectedFilter = filter;
+                      });
+                    }
+                  },
+                  backgroundColor: Colors.transparent,
+                  selectedColor: theme.colorScheme.primary.withOpacity(0.6),
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: isSelected
+                          ? Colors.transparent
+                          // theme.colorScheme.primary
+                          : Colors.grey.shade400,
+                      width: 1.2,
+                    ),
+                  ),
+                  showCheckmark: false,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void showFilterModal(TimeFilter filter) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.2),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // logic
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
