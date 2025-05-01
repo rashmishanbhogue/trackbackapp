@@ -1,6 +1,5 @@
 // entry.dart
 
-import 'dart:convert';
 import 'package:hive/hive.dart';
 
 part 'entry.g.dart'; // generate the adapter code

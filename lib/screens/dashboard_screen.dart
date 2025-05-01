@@ -1,4 +1,4 @@
-// dashboard_screen.dart
+// dashboard_screen.dart, display bar charts for total entries and pie charts for badges earned
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +7,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
-import '../theme.dart';
 import '../providers/date_entries_provider.dart';
 import '../utils/time_utils.dart';
 import '../models/entry.dart';
@@ -85,22 +84,22 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
 
   void moveReferenceDate(int direction) {
     setState(() {
-      print(
+      debugPrint(
           'Moving referenceDate. Current referenceDate: $referenceDate, Direction: $direction');
 
       if (viewType == 'Day') {
         referenceDate = referenceDate.add(Duration(days: direction));
-        print('New referenceDate for Day: $referenceDate');
+        debugPrint('New referenceDate for Day: $referenceDate');
       } else if (viewType == 'Week') {
         referenceDate = referenceDate.add(Duration(days: 7 * direction));
-        print('New referenceDate for Week: $referenceDate');
+        debugPrint('New referenceDate for Week: $referenceDate');
       } else if (viewType == 'Month') {
         referenceDate =
             DateTime(referenceDate.year, referenceDate.month + direction);
-        print('New referenceDate for Month: $referenceDate');
+        debugPrint('New referenceDate for Month: $referenceDate');
       } else if (viewType == 'Year') {
         referenceDate = DateTime(referenceDate.year + direction);
-        print('New referenceDate for Year: $referenceDate');
+        debugPrint('New referenceDate for Year: $referenceDate');
       }
     });
   }
@@ -123,7 +122,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     } else if (viewType == 'Week') {
       final startOfWeek =
           referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
-      final endOfWeek = startOfWeek.add(Duration(days: 6));
+      final endOfWeek = startOfWeek.add(const Duration(days: 6));
       if (startOfWeek.isBefore(now) && now.isBefore(endOfWeek)) {
         return 'This Week';
       } else {
@@ -142,32 +141,32 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   bool canMoveBack() {
-    final now = DateTime.now();
+    // final now = DateTime.now();
     final firstEntryDate = getFirstEntryDate();
 
     if (viewType == 'Day') {
-      print('value of firstEntryDate: $firstEntryDate');
+      debugPrint('value of firstEntryDate: $firstEntryDate');
       return referenceDate.isAfter(firstEntryDate);
     }
 
     if (viewType == 'Week') {
       final startOfWeek =
           referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
-      print('value of startOfWeek: $startOfWeek');
+      debugPrint('value of startOfWeek: $startOfWeek');
 
       return startOfWeek.isAfter(firstEntryDate);
     }
 
     if (viewType == 'Month') {
       final startOfMonth = DateTime(referenceDate.year, referenceDate.month, 1);
-      print('value of startOfMonth: $startOfMonth');
+      debugPrint('value of startOfMonth: $startOfMonth');
 
       return startOfMonth.isAfter(firstEntryDate);
     }
 
     if (viewType == 'Year') {
       final startOfYear = DateTime(referenceDate.year, 1, 1);
-      print('value of startOfYear: $startOfYear');
+      debugPrint('value of startOfYear: $startOfYear');
 
       return startOfYear.isAfter(firstEntryDate);
     }
@@ -177,32 +176,32 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
 
   bool canMoveForward() {
     final now = DateTime.now();
-    print(
+    debugPrint(
         'Checking if we can move forward. Current referenceDate: $referenceDate');
 
     if (viewType == 'Day') {
       final today = DateTime(now.year, now.month, now.day);
 
-      print('value of today for Day is: $today');
+      debugPrint('value of today for Day is: $today');
       return referenceDate.isBefore(today);
     }
 
     if (viewType == 'Week') {
       final startOfWeek = referenceDate.subtract(
           Duration(days: referenceDate.weekday - 1)); // start week mon
-      print('Start of week: $startOfWeek');
+      debugPrint('Start of week: $startOfWeek');
       final endOfWeek = DateTime(
         startOfWeek.year,
         startOfWeek.month,
         startOfWeek.day + 6, // sunday of the current week
         23, 59, 59, 999, // last moment of sunday
       ); // end week sun
-      print('End of week: $endOfWeek');
-      print('Today\'s date: $now');
-      print('Can move forward?: ${endOfWeek.isBefore(now)}');
+      debugPrint('End of week: $endOfWeek');
+      debugPrint('Today\'s date: $now');
+      debugPrint('Can move forward?: ${endOfWeek.isBefore(now)}');
 
       final canMove = endOfWeek.isBefore(now);
-      print(
+      debugPrint(
           'Can move forward in Week view: $canMove (startOfWeek: $startOfWeek, endOfWeek: $endOfWeek)');
       return canMove;
     }
@@ -210,17 +209,17 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     if (viewType == 'Month') {
       final canMove = referenceDate.year < now.year ||
           (referenceDate.year == now.year && referenceDate.month < now.month);
-      print('Can move forward in Month view: $canMove');
+      debugPrint('Can move forward in Month view: $canMove');
       return canMove;
     }
 
     if (viewType == 'Year') {
       final canMove = referenceDate.year < now.year;
-      print('Can move forward in Year view: $canMove');
+      debugPrint('Can move forward in Year view: $canMove');
       return canMove;
     }
 
-    print('Default return: false');
+    debugPrint('Default return: false');
     return false;
   }
 
@@ -339,24 +338,24 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                         viewType = 'Day';
                                         referenceDate = DateTime(
                                             now.year, now.month, now.day);
-                                        print(
+                                        debugPrint(
                                             'Switched to Day Tab: referenceDate = $referenceDate');
                                       } else if (index == 1) {
                                         viewType = 'Week';
                                         referenceDate = now.subtract(
                                             Duration(days: now.weekday - 1));
-                                        print(
+                                        debugPrint(
                                             'Switched to Week Tab: referenceDate = $referenceDate');
                                       } else if (index == 2) {
                                         viewType = 'Month';
                                         referenceDate =
                                             DateTime(now.year, now.month);
-                                        print(
+                                        debugPrint(
                                             'Switched to Month Tab: referenceDate = $referenceDate');
                                       } else if (index == 3) {
                                         viewType = 'Year';
                                         referenceDate = DateTime(now.year);
-                                        print(
+                                        debugPrint(
                                             'Switched to Year Tab: referenceDate = $referenceDate');
                                       }
                                     });
@@ -437,12 +436,12 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                               const SizedBox(height: 16),
                               const Divider(height: 16),
                               const SizedBox(height: 16),
-                              Align(
+                              const Align(
                                 alignment: Alignment.centerLeft,
-                                child: const Text(
+                                child: Text(
                                   'Time of Day Distribution:',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -583,7 +582,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
         filterEntriesByViewType(entries, viewType, selectedDate: selectedDate);
     if (filteredEntries.isEmpty) return badgeCountMap;
 
-    // group by day (NOT by week/month/year)
+    // group by day (not by week/month/year)
     Map<String, List<Entry>> entriesGroupedByDay = {};
     for (final entry in filteredEntries) {
       final dayKey = DateFormat('yyyy-MM-dd').format(entry.timestamp);
@@ -653,109 +652,95 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     return filteredEntries;
   }
 
-  Map<String, int> aggregateEntries(List<Entry> entries, String viewType) {
-    Map<String, int> data = {};
-
-    // Loop through the entries and aggregate them based on the viewType
-    for (var entry in entries) {
-      String key = '';
-      switch (viewType) {
-        case 'Day':
-          key =
-              DateFormat('yyyy-MM-dd').format(entry.timestamp); // Group by day
-          break;
-        case 'Week':
-          final startOfWeek = entry.timestamp
-              .subtract(Duration(days: entry.timestamp.weekday - 1));
-          key = DateFormat('yyyy-MM-dd')
-              .format(startOfWeek); // Group by week (start of the week)
-          break;
-        case 'Month':
-          key = DateFormat('yyyy-MM').format(entry.timestamp); // Group by month
-          break;
-        case 'Year':
-          key = DateFormat('yyyy').format(entry.timestamp); // Group by year
-          break;
-        default:
-          throw Exception('Invalid viewType');
-      }
-
-      // Increment the count for this date/week/month/year
-      data[key] = (data[key] ?? 0) + 1;
-    }
-
-    return data;
-  }
-
   Widget buildBarChart(
-      BuildContext context, List<Entry> entries, String viewType) {
+    BuildContext context,
+    List<Entry> entries,
+    String viewType,
+  ) {
     final theme = Theme.of(context);
-    final now = DateTime.now();
+    final now = referenceDate;
     List<String> xLabels = [];
     List<int> yValues = [];
 
-    // Get the aggregated data based on the selected viewType
-    Map<String, int> data = aggregateEntries(entries, viewType);
+    final filteredEntries =
+        filterEntriesByViewType(entries, viewType, selectedDate: referenceDate);
+
+    // aggregation
+    final Map<String, int> data = {};
+    for (var entry in filteredEntries) {
+      String key;
+      switch (viewType) {
+        case 'Day':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Week':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Month':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        case 'Year':
+          key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+          break;
+        default:
+          key = '';
+      }
+      if (key.isNotEmpty) {
+        data[key] = (data[key] ?? 0) + 1;
+      }
+    }
 
     void addBar(String label, int count) {
       xLabels.add(label);
       yValues.add(count);
     }
 
-    // Build chart logic per viewType
+    // bars
     switch (viewType) {
       case 'Day':
         final today = DateFormat('yyyy-MM-dd').format(now);
-        final count = data[today] ?? 0; // Get the count for today
-        addBar(DateFormat('dd/MM').format(now), count); // Add the bar for today
+        final count = data[today] ?? 0;
+        addBar(DateFormat('dd/MM').format(now), count);
         break;
 
       case 'Week':
-        final startOfWeek = now
-            .subtract(Duration(days: now.weekday - 1)); // Get start of the week
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
         for (int i = 0; i < 7; i++) {
           final date = startOfWeek.add(Duration(days: i));
           final key = DateFormat('yyyy-MM-dd').format(date);
-          final label = DateFormat('E').format(date); // Mon, Tue, etc.
-          addBar(label, data[key] ?? 0); // Add bar for each day of the week
+          final label = DateFormat('E').format(date);
+          addBar(label, data[key] ?? 0);
         }
         break;
 
       case 'Month':
-        final firstOfMonth =
-            DateTime(now.year, now.month, 1); // Get the first day of the month
-        final daysInMonth = DateTime(now.year, now.month + 1, 0)
-            .day; // Get the number of days in the month
-        final numWeeks = ((firstOfMonth.weekday - 1 + daysInMonth) / 7)
-            .ceil(); // Get number of weeks in the month
+        final firstOfMonth = DateTime(now.year, now.month, 1);
+        final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+        final numWeeks = ((firstOfMonth.weekday - 1 + daysInMonth) / 7).ceil();
 
         for (int i = 0; i < numWeeks; i++) {
           int weekTotal = 0;
           for (int j = 0; j < 7; j++) {
             final day = firstOfMonth.add(Duration(days: i * 7 + j));
-            if (day.month != now.month)
-              break; // Break if the day exceeds the current month
+            if (day.month != now.month) break;
             final key = DateFormat('yyyy-MM-dd').format(day);
-            weekTotal += data[key] ?? 0; // Add total for the week
+            weekTotal += data[key] ?? 0;
           }
-          addBar('W${i + 1}', weekTotal); // Add bar for week
+          addBar('W${i + 1}', weekTotal);
         }
         break;
 
       case 'Year':
         for (int i = 1; i <= 12; i++) {
           int monthTotal = 0;
-          final firstDay =
-              DateTime(now.year, i, 1); // Get the first day of the month
-          final daysInMonth =
-              DateTime(now.year, i + 1, 0).day; // Get number of days in month
+          final firstDay = DateTime(now.year, i, 1);
+          final daysInMonth = DateTime(now.year, i + 1, 0).day;
           for (int d = 1; d <= daysInMonth; d++) {
-            final day = DateTime(now.year, i, d); // Get each day of the month
+            final day = DateTime(now.year, i, d);
             final key = DateFormat('yyyy-MM-dd').format(day);
-            monthTotal += data[key] ?? 0; // Add total for the month
+            monthTotal += data[key] ?? 0;
           }
-          addBar(DateFormat('MMM').format(firstDay),
-              monthTotal); // Add bar for each month
+          addBar(DateFormat('MMM').format(firstDay), monthTotal);
         }
         break;
 
@@ -763,66 +748,90 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
         return const Center(child: Text('Invalid view type'));
     }
 
-    // Calculate maximum Y value to set the maxY of the chart
     final maxY = yValues.isEmpty
         ? 5.0
         : (yValues.reduce((a, b) => a > b ? a : b)).toDouble() + 1.0;
 
-    // Build the BarChart widget
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontalPadding = 16.0;
-        final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
-        final barWidth =
-            availableWidth / (xLabels.length < 7 ? 7 : xLabels.length);
+    return LayoutBuilder(builder: (context, constraints) {
+      const horizontalPadding = 16.0;
+      final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
+      final barWidth =
+          availableWidth / (xLabels.length < 7 ? 7 : xLabels.length);
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: SizedBox(
-            height: constraints.maxHeight * 0.8,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: maxY,
-                barTouchData: BarTouchData(enabled: true),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, _) {
-                        final index = value.toInt();
-                        if (index >= xLabels.length)
-                          return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(xLabels[index],
-                              style: const TextStyle(fontSize: 10)),
-                        );
-                      },
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: SizedBox(
+          height: constraints.maxHeight * 0.8,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxY,
+                  barTouchData: BarTouchData(enabled: true),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          final index = value.toInt();
+                          if (index >= xLabels.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(xLabels[index],
+                                style: const TextStyle(fontSize: 10)),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: true, interval: 1),
                     ),
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, interval: 1),
-                  ),
+                  barGroups: List.generate(xLabels.length, (index) {
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: yValues[index].toDouble(),
+                          width: barWidth * 0.6,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    );
+                  }),
                 ),
-                barGroups: List.generate(xLabels.length, (index) {
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: yValues[index].toDouble(),
-                        width: barWidth * 0.6,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ],
-                  );
-                }),
               ),
-            ),
+              if (yValues.every((y) => y == 0))
+                Text(
+                  () {
+                    switch (viewType) {
+                      case 'Day':
+                        return 'No entries for this day';
+                      case 'Week':
+                        return 'No entries for this week';
+                      case 'Month':
+                        return 'No entries for this month';
+                      case 'Year':
+                        return 'No entries for this year';
+                      default:
+                        return 'No data';
+                    }
+                  }(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 
   Widget buildPieChart(
@@ -842,13 +851,13 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
       final noDataMessage = () {
         switch (viewType) {
           case 'Day':
-            return 'No entries for this Day';
+            return 'No entries for this day';
           case 'Week':
-            return 'No entries for this Week';
+            return 'No entries for this week';
           case 'Month':
-            return 'No entries for this Month';
+            return 'No entries for this month';
           case 'Year':
-            return 'No entries for this Year';
+            return 'No entries for this year';
           default:
             return 'No data';
         }
@@ -928,7 +937,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                       color: theme.textTheme.bodyLarge?.color,
                       shadows: [
                         Shadow(
-                          offset: Offset(0, 0),
+                          offset: const Offset(0, 0),
                           blurRadius: 3,
                           color: Colors.black.withOpacity(0.5),
                         ),
@@ -949,17 +958,17 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
   Color getColorForBadge(String badge) {
     switch (badge) {
       case 'Yellow':
-        return Color(0xFFECD438);
+        return const Color(0xFFECD438);
       case 'Green':
-        return Color(0xFF3EEC38);
+        return const Color(0xFF3EEC38);
       case 'Blue':
-        return Color(0xFF38C5EC);
+        return const Color(0xFF38C5EC);
       case 'Purple':
-        return Color(0xFFAD38EC);
+        return const Color(0xFFAD38EC);
       case 'Red':
-        return Color(0xFFEC383B);
+        return const Color(0xFFEC383B);
       default:
-        return Color(0xFFE2E1DD);
+        return const Color(0xFFE2E1DD);
     }
   }
 
