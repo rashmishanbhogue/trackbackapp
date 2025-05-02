@@ -24,7 +24,12 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   Map<String, int> labelCounts = {};
   Map<String, List<Entry>> labelToEntries = {};
   DateTime? lastUpdated;
+  String? expandedCategory;
+
   TimeFilter selectedFilter = TimeFilter.all;
+  final ScrollController chipScrollController = ScrollController();
+  final List<GlobalKey> chipKeys =
+      List.generate(TimeFilter.values.length, (_) => GlobalKey());
 
   @override
   void initState() {
@@ -207,107 +212,117 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
               const SizedBox(height: 8),
               ...standardCategories.map((category) {
                 final count = labelCounts[category] ?? 0;
-                final entries = labelToEntries[category] ?? [];
+                final entries = (labelToEntries[category] ?? [])
+                  ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    collapsedShape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    trailing: const SizedBox.shrink(),
-                    title: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: getCategoryColor(category, isDark),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      setState(() {
+                        expandedCategory = null;
+                      });
+                    },
+                    child: ExpansionTile(
+                      initiallyExpanded: expandedCategory == category,
+                      tilePadding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: isRefreshing
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
+                      collapsedShape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      trailing: const SizedBox.shrink(),
+                      title: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: getCategoryColor(category, isDark),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: isRefreshing
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '$category: $count',
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 15),
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.black),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Center(
+                                child: Text(
                                   '$category: $count',
                                   style: const TextStyle(
                                     color: Colors.black87,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                // const SizedBox(width: 15),
-                                const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.black),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Center(
-                              child: Text(
-                                '$category: $count',
-                                style: const TextStyle(
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w600,
-                                ),
                               ),
-                            ),
-                    ),
-                    children: entries.isNotEmpty
-                        ? [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: getLighterCategoryColor(
-                                          category, isDark),
-                                      borderRadius: const BorderRadius.only(
-                                        bottomLeft: Radius.circular(30),
-                                        bottomRight: Radius.circular(30),
+                      ),
+                      children: entries.isNotEmpty
+                          ? [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: getLighterCategoryColor(
+                                            category, isDark),
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(30),
+                                          bottomRight: Radius.circular(30),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: entries.map((entry) {
+                                          return ListTile(
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 16),
+                                            title: Text(
+                                              entry.text,
+                                              style: const TextStyle(
+                                                  color: Colors.black87),
+                                            ),
+                                            subtitle: Text(
+                                              DateFormat('dd MMM, HH:mm')
+                                                  .format(entry.timestamp),
+                                              style: const TextStyle(
+                                                  color: Colors.black54),
+                                            ),
+                                          );
+                                        }).toList(),
                                       ),
                                     ),
-                                    child: Column(
-                                      children: entries.map((entry) {
-                                        return ListTile(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 16),
-                                          title: Text(
-                                            entry.text,
-                                            style: const TextStyle(
-                                                color: Colors.black87),
-                                          ),
-                                          subtitle: Text(
-                                            DateFormat('dd MMM, HH:mm')
-                                                .format(entry.timestamp),
-                                            style: const TextStyle(
-                                                color: Colors.black54),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 28),
-                              ],
-                            )
-                          ]
-                        : [
-                            const Padding(
-                              padding: EdgeInsets.all(8),
-                              child:
-                                  Text('No entries found for this category.'),
-                            ),
-                          ],
+                                  const SizedBox(width: 28),
+                                ],
+                              ),
+                            ]
+                          : [
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child:
+                                    Text('No entries found for this category.'),
+                              ),
+                            ],
+                    ),
                   ),
                 );
               }),
@@ -370,13 +385,17 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
       child: SizedBox(
         width: double.infinity,
         child: SingleChildScrollView(
+          controller: chipScrollController,
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: TimeFilter.values.map((filter) {
+            children: TimeFilter.values.asMap().entries.map((entry) {
+              final index = entry.key;
+              final filter = entry.value;
               final isSelected = selectedFilter == filter;
               return Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: RawChip(
+                  key: chipKeys[index],
                   label: Text(
                     filter.name.toUpperCase(),
                     style: TextStyle(
@@ -393,6 +412,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                       setState(() {
                         selectedFilter = filter;
                       });
+                      scrollToSelectedChip(index);
                     }
                   },
                   backgroundColor: Colors.transparent,
@@ -416,22 +436,190 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     );
   }
 
-  void showFilterModal(TimeFilter filter) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.2),
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // logic
-            ],
+  void scrollToSelectedChip(int index) {
+    final keyContext = chipKeys[index].currentContext;
+    if (keyContext != null) {
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: const Duration(milliseconds: 300),
+        alignment: 0.5,
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  List<DateTime> getAvailableDates(List<Entry> entries) {
+    return entries.map((entry) => entry.timestamp).toSet().toList();
+  }
+
+  List<int> getAvailableMonths(List<Entry> entries) {
+    return entries.map((entry) => entry.timestamp.month).toSet().toList();
+  }
+
+  List<int> getAvailableYears(List<Entry> entries) {
+    return entries.map((entry) => entry.timestamp.year).toSet().toList();
+  }
+
+  List<String> getAvailableWeeks(List<Entry> entries) {
+    return entries
+        .map((entry) {
+          final startOfWeek = entry.timestamp
+              .subtract(Duration(days: entry.timestamp.weekday - 1));
+          return "${startOfWeek.year}-${startOfWeek.month}-${startOfWeek.day}";
+        })
+        .toSet()
+        .toList();
+  }
+
+  void showFilterModal(
+      BuildContext context, TimeFilter filter, List<Entry> entries) {
+    switch (filter) {
+      case TimeFilter.day:
+        final availableDates = getAvailableDates(entries);
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Select a Day",
+                      style: Theme.of(context).textTheme.titleLarge),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: availableDates.length,
+                      itemBuilder: (context, index) {
+                        final date = availableDates[index];
+                        return ListTile(
+                          title: Text(date.toLocal().toString()),
+                          onTap: () {
+                            setState(() {
+                              selectedFilter = TimeFilter.day;
+                            });
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
+        break;
+
+      case TimeFilter.week:
+        final availableWeeks = getAvailableWeeks(entries);
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Select a Week",
+                      style: Theme.of(context).textTheme.titleLarge),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: availableWeeks.length,
+                      itemBuilder: (context, index) {
+                        final week = availableWeeks[index];
+                        return ListTile(
+                          title: Text("Week: $week"),
+                          onTap: () {
+                            setState(() {
+                              selectedFilter = TimeFilter.week;
+                            });
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        break;
+
+      case TimeFilter.month:
+        final availableMonths = getAvailableMonths(entries);
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Select a Month",
+                      style: Theme.of(context).textTheme.titleLarge),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: availableMonths.length,
+                      itemBuilder: (context, index) {
+                        final month = availableMonths[index];
+                        return ListTile(
+                          title: Text("Month: $month"),
+                          onTap: () {
+                            setState(() {
+                              selectedFilter = TimeFilter.month;
+                            });
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        break;
+
+      case TimeFilter.year:
+        final availableYears = getAvailableYears(entries);
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Select a Year",
+                      style: Theme.of(context).textTheme.titleLarge),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: availableYears.length,
+                      itemBuilder: (context, index) {
+                        final year = availableYears[index];
+                        return ListTile(
+                          title: Text("Year: $year"),
+                          onTap: () {
+                            setState(() {
+                              selectedFilter = TimeFilter.year;
+                            });
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        break;
+
+      default:
+        break;
+    }
   }
 }
