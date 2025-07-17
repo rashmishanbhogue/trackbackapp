@@ -18,6 +18,10 @@ dependencies:
   langchain: ^0.3.0
   langchain_openai: ^0.3.0
   fl_chart: ^0.66.0
+  syncfusion_flutter_datepicker: ^21.2.3
+  faker: ^2.1.0
+  uuid: ^4.0.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
