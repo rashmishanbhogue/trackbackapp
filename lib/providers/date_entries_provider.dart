@@ -28,7 +28,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
 
   void loadEntries() {
     final stored = box.get('entries');
-    debugPrint('Raw from Hive: $stored');
+    // debugPrint('Raw from Hive: $stored');
 
     if (stored != null && stored is Map) {
       final parsed = Map<String, List<Entry>>.fromEntries(
