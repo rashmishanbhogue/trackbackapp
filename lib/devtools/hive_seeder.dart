@@ -42,7 +42,7 @@ Future<void> runHiveSeeder() async {
       );
     });
 
-    debugPrint('Loaded entries from box. Days available: ${entries.keys}');
+    // debugPrint('Loaded entries from box. Days available: ${entries.keys}');
   }
 
   final faker = Faker();
@@ -97,15 +97,15 @@ Future<void> runHiveSeeder() async {
         value.map((e) => jsonEncode(e.toJson())).toList(),
       ));
 
-  debugPrint("Putting entries into Hive...");
-  debugPrint("storedMap keys: ${storedMap.keys}");
-  debugPrint("Sample value for first key: ${storedMap.values.first}");
+  // debugPrint("Putting entries into Hive...");
+  // debugPrint("storedMap keys: ${storedMap.keys}");
+  // debugPrint("Sample value for first key: ${storedMap.values.first}");
 
   await box.clear(); // optional: clear old data before seeding
   await box.put('entries', storedMap);
   await box.flush(); // force write to disk
 
-  debugPrint("box.keys after put: ${box.keys}");
+  // debugPrint("box.keys after put: ${box.keys}");
 
   // after writing to the hive box, immediately try to read back the 'entries' key
   // this is a sanity check to make sure the write actually succeeded
@@ -113,7 +113,7 @@ Future<void> runHiveSeeder() async {
   // throwing an exception here makes it clear there is a critical issue with data persistence
   final rawConfirm = box.get('entries');
 
-  debugPrint("rawConfirm after put: $rawConfirm");
+  // debugPrint("rawConfirm after put: $rawConfirm");
 
   if (rawConfirm == null) {
     throw Exception('No entries found in Hive box during confirmation.');
@@ -136,8 +136,8 @@ Future<void> runHiveSeeder() async {
     );
   });
 
-  debugPrint("Confirm read after write: ${confirm.keys}");
+  // debugPrint("Confirm read after write: ${confirm.keys}");
 
-  debugPrint('Seeder completed. Box keys: ${box.keys}');
-  debugPrint("Box path: ${box.path}");
+  // debugPrint('Seeder completed. Box keys: ${box.keys}');
+  // debugPrint("Box path: ${box.path}");
 }
