@@ -1,6 +1,9 @@
+// ai_metrics_screen.dart, optional and uses internet
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
@@ -25,6 +28,10 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   Map<String, List<Entry>> labelToEntries = {};
   DateTime? lastUpdated;
   String? expandedCategory;
+  OverlayEntry? filterOverlayEntry;
+
+  DateTime selectedDay = DateTime.now();
+  DateTime focusedDay = DateTime.now();
 
   TimeFilter selectedFilter = TimeFilter.all;
   final ScrollController chipScrollController = ScrollController();
@@ -407,16 +414,59 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                     ),
                   ),
                   selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        selectedFilter = filter;
-                      });
-                      scrollToSelectedChip(index);
+                  // made async to ensure chip scrolls into view before calculating its position for overlay alignment
+                  onSelected: (selected) async {
+                    // if the chip was unselected/ deselected, do nothing
+                    if (!selected) return;
+
+                    // update the selected filter state
+                    setState(() {
+                      selectedFilter = filter;
+                    });
+
+                    // get the context for this chip from its globalkey
+                    final chipContext = chipKeys[index].currentContext;
+                    if (chipContext == null) return;
+
+                    // scroll the selected chip into view in case it is offscreen
+                    // current position for this piece of code, since All gives issues otherwise
+                    await Scrollable.ensureVisible(
+                      chipContext,
+                      duration: const Duration(milliseconds: 300),
+                      alignment: 0.5, // center the chip in view
+                      curve: Curves.easeInOut,
+                    );
+
+                    // small delay to ensure layout has fully updated after scroll
+                    await Future.delayed(const Duration(milliseconds: 10));
+
+                    // prevent context access if widget was disposed during await gap
+                    if (!chipContext.mounted) return;
+
+                    // if All filter is selected, no overlay required - exit from here
+                    // current position for this piece of code, since All gives issues otherwise
+                    // scroll must already happen before this check, else All does not move back into position
+                    if (filter == TimeFilter.all) {
+                      removeFilterOverlay();
+                      return; // skip overlay only for the 'all' pill filter
                     }
+
+                    // for all other filters, calculate the chips screen position
+                    final renderBox =
+                        chipContext.findRenderObject() as RenderBox;
+                    final offset = renderBox.localToGlobal(Offset.zero);
+                    final size = renderBox.size;
+
+                    // track if this is the last chip
+                    // required for the position overlay
+                    // which, for the last chip, is aligned right unlike the center alignment for the rest
+                    final isLastChip = index == TimeFilter.values.length - 1;
+                    final entries = labelToEntries[filter.name] ?? [];
+                    showFilterOverlay(offset, size, filter, isLastChip,
+                        entries: entries);
                   },
                   backgroundColor: Colors.transparent,
-                  selectedColor: theme.colorScheme.primary.withOpacity(0.6),
+                  selectedColor: theme.colorScheme.primary.withAlpha(153),
                   shape: StadiumBorder(
                     side: BorderSide(
                       color: isSelected
@@ -449,7 +499,12 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   }
 
   List<DateTime> getAvailableDates(List<Entry> entries) {
-    return entries.map((entry) => entry.timestamp).toSet().toList();
+    return entries
+        .map((entry) => DateTime(
+            entry.timestamp.year, entry.timestamp.month, entry.timestamp.day))
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
   }
 
   List<int> getAvailableMonths(List<Entry> entries) {
@@ -471,155 +526,142 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
         .toList();
   }
 
-  void showFilterModal(
-      BuildContext context, TimeFilter filter, List<Entry> entries) {
-    switch (filter) {
-      case TimeFilter.day:
-        final availableDates = getAvailableDates(entries);
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Select a Day",
-                      style: Theme.of(context).textTheme.titleLarge),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: availableDates.length,
-                      itemBuilder: (context, index) {
-                        final date = availableDates[index];
-                        return ListTile(
-                          title: Text(date.toLocal().toString()),
-                          onTap: () {
-                            setState(() {
-                              selectedFilter = TimeFilter.day;
-                            });
-                            Navigator.of(context).pop();
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        break;
+  // show an overlay positioned below the selected chip, aligned based on chips screen position
+  void showFilterOverlay(
+      Offset offset, Size chipSize, TimeFilter filter, bool alignRight,
+      {List<Entry> entries = const []}) {
+    removeFilterOverlay(); // remove previous overlay if any
 
-      case TimeFilter.week:
-        final availableWeeks = getAvailableWeeks(entries);
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Select a Week",
-                      style: Theme.of(context).textTheme.titleLarge),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: availableWeeks.length,
-                      itemBuilder: (context, index) {
-                        final week = availableWeeks[index];
-                        return ListTile(
-                          title: Text("Week: $week"),
-                          onTap: () {
-                            setState(() {
-                              selectedFilter = TimeFilter.week;
-                            });
-                            Navigator.of(context).pop();
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        break;
+    final overlay = Overlay.of(context);
+    final screenSize = MediaQuery.of(context).size;
+    const double overlayWidth = 250;
+    const double overlayHeight = 300;
+    double leftPosition;
 
-      case TimeFilter.month:
-        final availableMonths = getAvailableMonths(entries);
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Select a Month",
-                      style: Theme.of(context).textTheme.titleLarge),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: availableMonths.length,
-                      itemBuilder: (context, index) {
-                        final month = availableMonths[index];
-                        return ListTile(
-                          title: Text("Month: $month"),
-                          onTap: () {
-                            setState(() {
-                              selectedFilter = TimeFilter.month;
-                            });
-                            Navigator.of(context).pop();
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        break;
-
-      case TimeFilter.year:
-        final availableYears = getAvailableYears(entries);
-        showDialog(
-          context: context,
-          builder: (context) => Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Select a Year",
-                      style: Theme.of(context).textTheme.titleLarge),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: availableYears.length,
-                      itemBuilder: (context, index) {
-                        final year = availableYears[index];
-                        return ListTile(
-                          title: Text("Year: $year"),
-                          onTap: () {
-                            setState(() {
-                              selectedFilter = TimeFilter.year;
-                            });
-                            Navigator.of(context).pop();
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-        break;
-
-      default:
-        break;
+    // if the chip is the last one (far right), align overlay to its right edge
+    // otherwise center overlay under the respective chip
+    if (alignRight) {
+      leftPosition = offset.dx + chipSize.width - overlayWidth;
+    } else {
+      leftPosition = offset.dx + (chipSize.width / 2) - (overlayWidth / 2);
     }
+
+    // prevent the overlay from overflowing the screen
+    leftPosition =
+        leftPosition.clamp(8.0, screenSize.width - overlayWidth - 8.0);
+
+    late OverlayEntry tempOverlay;
+
+    tempOverlay = OverlayEntry(
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          tempOverlay.remove();
+          filterOverlayEntry = null;
+        },
+        child: Stack(children: [
+          Positioned(
+            left: leftPosition,
+            top: offset.dy + chipSize.height + 6, // just below the chip
+            width: overlayWidth,
+            child: Material(
+              elevation: 6,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  maxWidth: 260,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // close button aligned top right
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => removeFilterOverlay(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                      // placeholder content
+                      if (filter == TimeFilter.day)
+                        TableCalendar(
+                          rowHeight: 32,
+                          firstDay: DateTime(2020),
+                          lastDay: DateTime.now(),
+                          focusedDay: focusedDay,
+                          selectedDayPredicate: (day) =>
+                              isSameDay(day, selectedDay),
+                          onDaySelected: (selected, focused) {
+                            setState(() {
+                              selectedDay = selected;
+                              focusedDay = focused;
+                            });
+                            removeFilterOverlay();
+                            // optionally trigger filtering logic here
+                          },
+                          headerStyle: const HeaderStyle(
+                              formatButtonVisible: false,
+                              titleCentered: true,
+                              titleTextStyle: TextStyle(fontSize: 14),
+                              leftChevronIcon:
+                                  Icon(Icons.chevron_left, size: 20),
+                              rightChevronIcon:
+                                  Icon(Icons.chevron_right, size: 18)),
+                          daysOfWeekStyle: DaysOfWeekStyle(
+                              dowTextFormatter: (date, locale) => DateFormat.E(
+                                          locale)
+                                      .format(date)[
+                                  0], // first letter of the day s, m, t, etc
+                              weekdayStyle: const TextStyle(fontSize: 12),
+                              weekendStyle: const TextStyle(
+                                  fontSize: 12, color: Colors.orange)),
+                          calendarStyle: const CalendarStyle(
+                            todayDecoration: BoxDecoration(
+                              color: Colors.blueAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            selectedDecoration: BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                            ),
+                            defaultTextStyle: TextStyle(fontSize: 12),
+                            weekendTextStyle: TextStyle(fontSize: 12),
+                            selectedTextStyle: TextStyle(color: Colors.white),
+                            cellMargin: EdgeInsets.all(2),
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                      ElevatedButton(
+                        onPressed: () {
+                          // accept and close the overlay, filtering the data below based on the selection
+                          removeFilterOverlay();
+                        },
+                        child: const Text("OK"),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+
+    // insert overlay into the ui
+    overlay.insert(tempOverlay);
+    filterOverlayEntry = tempOverlay; // save reference to remove later
+  }
+
+  // remove curerntly active filter overlay from the ui, if any
+  void removeFilterOverlay() {
+    filterOverlayEntry?.remove();
+    filterOverlayEntry = null;
   }
 }
