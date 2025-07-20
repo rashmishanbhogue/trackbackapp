@@ -22,6 +22,7 @@ dependencies:
   faker: ^2.1.0
   uuid: ^4.0.0
   path_provider: ^2.1.5
+  table_calendar: ^3.0.8
 
 dev_dependencies:
   flutter_test:
