@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:trackbackapp/theme.dart';
 import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
@@ -223,14 +224,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               borderRadius: BorderRadius.circular(20),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.redAccent,
+                                  color: AppTheme.iconDeleteContent,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 alignment: Alignment.centerRight,
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 20),
                                 child: const Icon(Icons.delete,
-                                    color: Colors.white),
+                                    color: AppTheme.baseWhite),
                               ),
                             ),
                             confirmDismiss: (direction) async {
@@ -243,18 +244,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 decoration: BoxDecoration(
                                   color: index.isEven
-                                      ? Theme.of(context).brightness ==
-                                              Brightness.light
-                                          ? Colors.grey.shade100
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .surface
-                                      : Theme.of(context).brightness ==
-                                              Brightness.light
-                                          ? Colors.grey.shade200
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainer
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHigh,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Column(
@@ -275,8 +270,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                               color: Theme.of(context)
                                                           .brightness ==
                                                       Brightness.light
-                                                  ? Colors.black
-                                                  : Colors.white70,
+                                                  ? AppTheme.textPrimaryLight
+                                                  : AppTheme.textPrimaryDark,
                                             ),
                                           ),
                                           const Expanded(
@@ -335,8 +330,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                                 color: Theme.of(context)
                                                             .brightness ==
                                                         Brightness.light
-                                                    ? Colors.black87
-                                                    : Colors.white60,
+                                                    ? Theme.of(context)
+                                                        .textTheme
+                                                        .bodyLarge
+                                                        ?.color
+                                                    : Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color,
                                               ),
                                             ),
                                           ),
@@ -374,7 +375,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
             FocusScope.of(context).unfocus();
           }
         },
-        backgroundColor: Colors.amber[700],
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, size: 30),
       ),
     );
@@ -423,7 +424,8 @@ Widget buildEntriesForDate(WidgetRef ref, String date) {
               trailing: IconButton(
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                icon: const Icon(Icons.remove, color: Colors.redAccent),
+                icon:
+                    const Icon(Icons.remove, color: AppTheme.iconDeleteContent),
                 onPressed: () {
                   ref
                       .read(dateEntriesProvider.notifier)

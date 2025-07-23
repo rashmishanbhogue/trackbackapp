@@ -1,10 +1,13 @@
+// ai_labeling.dart, access groq-llama to receive the category input
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/constants.dart';
 
 Future<String> classifyEntry(String text) async {
-  final url = 'https://api.groq.com/openai/v1/chat/completions';
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
   final apiKey = dotenv.env['GROQ_API_KEY'];
 
   if (apiKey == null || apiKey.isEmpty) {
@@ -52,7 +55,7 @@ If uncertain, return "Idle".
       }
     }
   } catch (e) {
-    print('Error during classification: $e');
+    debugPrint('Error during classification: $e');
   }
 
   return 'Uncategorized'; // safe fallback

@@ -10,6 +10,7 @@ import '../providers/date_entries_provider.dart';
 import '../utils/time_utils.dart';
 import '../models/entry.dart';
 import '../metrics/charts.dart';
+import '../theme.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -211,8 +212,9 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     final isDark = theme.brightness == Brightness.dark;
 
     final selectedColor = theme.appBarTheme.iconTheme?.color ??
-        (isDark ? Colors.white : Colors.black);
-    final unselectedColor = isDark ? Colors.white38 : Colors.black38;
+        (isDark ? AppTheme.baseWhite : AppTheme.baseBlack);
+    final unselectedColor =
+        isDark ? AppTheme.textDisabledDark : AppTheme.textDisabledLight;
 
     final dataMap = <String, int>{};
     for (var entry in dateEntries.entries) {
@@ -352,6 +354,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                   height: 1.42,
                                   letterSpacing: 0.1,
                                 ),
+                                labelPadding:
+                                    const EdgeInsets.symmetric(vertical: 6),
                                 tabs: const [
                                   Tab(text: 'Day'),
                                   Tab(text: 'Week'),

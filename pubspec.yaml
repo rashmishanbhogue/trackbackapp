@@ -23,6 +23,7 @@ dependencies:
   uuid: ^4.0.0
   path_provider: ^2.1.5
   table_calendar: ^3.0.8
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:

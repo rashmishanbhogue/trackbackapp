@@ -11,6 +11,8 @@ import '../models/entry.dart';
 import '../utils/ai_labeling.dart';
 import '../utils/hive_utils.dart';
 import '../utils/constants.dart';
+import '../utils/calendar_utils.dart';
+import '../utils/month_year_utils.dart';
 import '../theme.dart';
 
 enum TimeFilter { all, day, week, month, year }
@@ -32,6 +34,17 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   DateTime selectedDay = DateTime.now();
   DateTime focusedDay = DateTime.now();
+
+  DateTime rangeStartDay = DateTime.now();
+  DateTime rangeEndDay = DateTime.now();
+
+  DateTime focusedMonth = DateTime.now();
+  DateTime? selectedMonth;
+  Set<DateTime> availableMonthData = {};
+
+  DateTime focusedYear = DateTime.now();
+  DateTime? selectedYear;
+  Set<DateTime> availableYearData = {};
 
   TimeFilter selectedFilter = TimeFilter.all;
   final ScrollController chipScrollController = ScrollController();
@@ -127,7 +140,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   String getBroaderCategory(String label) {
     if (standardCategories.contains(label)) {
-      return label;
+      label;
     }
     return 'Uncategorized';
   }
@@ -177,7 +190,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? Colors.black : Colors.white,
+                    isDark ? AppTheme.baseBlack : AppTheme.baseWhite,
                   ),
                 ),
               )
@@ -255,7 +268,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                   Text(
                                     '$category: $count',
                                     style: const TextStyle(
-                                      color: Colors.black87,
+                                      color: AppTheme.textPrimaryLight,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -266,7 +279,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.black),
+                                          AppTheme.baseBlack),
                                     ),
                                   ),
                                 ],
@@ -275,7 +288,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                 child: Text(
                                   '$category: $count',
                                   style: const TextStyle(
-                                    color: Colors.black87,
+                                    color: AppTheme.textPrimaryLight,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -305,13 +318,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                             title: Text(
                                               entry.text,
                                               style: const TextStyle(
-                                                  color: Colors.black87),
+                                                  color: AppTheme
+                                                      .textPrimaryLight),
                                             ),
                                             subtitle: Text(
                                               DateFormat('dd MMM, HH:mm')
                                                   .format(entry.timestamp),
                                               style: const TextStyle(
-                                                  color: Colors.black54),
+                                                  color: AppTheme
+                                                      .textSecondaryLight),
                                             ),
                                           );
                                         }).toList(),
@@ -407,7 +422,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                     filter.name.toUpperCase(),
                     style: TextStyle(
                       color: isSelected
-                          ? (isDark ? Colors.white : Colors.black)
+                          ? (isDark ? AppTheme.baseWhite : AppTheme.baseBlack)
                           : Colors.grey[600],
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.w500,
@@ -416,13 +431,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                   selected: isSelected,
                   // made async to ensure chip scrolls into view before calculating its position for overlay alignment
                   onSelected: (selected) async {
-                    // if the chip was unselected/ deselected, do nothing
-                    if (!selected) return;
+                    // if the same chip is tapped on again, reopen the overlay manually
+                    final isAlreadySelected = selectedFilter == filter;
 
-                    // update the selected filter state
-                    setState(() {
-                      selectedFilter = filter;
-                    });
+                    // update selected filter state only if it is a new selection
+                    if (!isAlreadySelected) {
+                      setState(() {
+                        selectedFilter = filter;
+                      });
+                    }
 
                     // get the context for this chip from its globalkey
                     final chipContext = chipKeys[index].currentContext;
@@ -535,7 +552,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     final overlay = Overlay.of(context);
     final screenSize = MediaQuery.of(context).size;
     const double overlayWidth = 250;
-    const double overlayHeight = 300;
+    // const double overlayHeight = 300;
     double leftPosition;
 
     // if the chip is the last one (far right), align overlay to its right edge
@@ -553,106 +570,177 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     late OverlayEntry tempOverlay;
 
     tempOverlay = OverlayEntry(
-      builder: (context) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () {
-          tempOverlay.remove();
-          filterOverlayEntry = null;
-        },
-        child: Stack(children: [
-          Positioned(
-            left: leftPosition,
-            top: offset.dy + chipSize.height + 6, // just below the chip
-            width: overlayWidth,
-            child: Material(
-              elevation: 6,
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.6,
-                  maxWidth: 260,
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // close button aligned top right
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => removeFilterOverlay(),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
+        builder: (context) => Stack(children: [
+              // dismiss background taps - do not close the overlay if anywhere on the overlay is tapped
+              ModalBarrier(
+                dismissible: true,
+                color: Colors.transparent,
+                onDismiss: () {
+                  removeFilterOverlay();
+                },
+              ),
+              Stack(children: [
+                Positioned(
+                  left: leftPosition,
+                  top: offset.dy + chipSize.height + 6, // just below the chip
+                  width: overlayWidth,
+                  child: Material(
+                    elevation: 6,
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.6,
+                        maxWidth: 260,
                       ),
-                      // placeholder content
-                      if (filter == TimeFilter.day)
-                        TableCalendar(
-                          rowHeight: 32,
-                          firstDay: DateTime(2020),
-                          lastDay: DateTime.now(),
-                          focusedDay: focusedDay,
-                          selectedDayPredicate: (day) =>
-                              isSameDay(day, selectedDay),
-                          onDaySelected: (selected, focused) {
-                            setState(() {
-                              selectedDay = selected;
-                              focusedDay = focused;
-                            });
-                            removeFilterOverlay();
-                            // optionally trigger filtering logic here
-                          },
-                          headerStyle: const HeaderStyle(
-                              formatButtonVisible: false,
-                              titleCentered: true,
-                              titleTextStyle: TextStyle(fontSize: 14),
-                              leftChevronIcon:
-                                  Icon(Icons.chevron_left, size: 20),
-                              rightChevronIcon:
-                                  Icon(Icons.chevron_right, size: 18)),
-                          daysOfWeekStyle: DaysOfWeekStyle(
-                              dowTextFormatter: (date, locale) => DateFormat.E(
-                                          locale)
-                                      .format(date)[
-                                  0], // first letter of the day s, m, t, etc
-                              weekdayStyle: const TextStyle(fontSize: 12),
-                              weekendStyle: const TextStyle(
-                                  fontSize: 12, color: Colors.orange)),
-                          calendarStyle: const CalendarStyle(
-                            todayDecoration: BoxDecoration(
-                              color: Colors.blueAccent,
-                              shape: BoxShape.circle,
-                            ),
-                            selectedDecoration: BoxDecoration(
-                              color: Colors.orange,
-                              shape: BoxShape.circle,
-                            ),
-                            defaultTextStyle: TextStyle(fontSize: 12),
-                            weekendTextStyle: TextStyle(fontSize: 12),
-                            selectedTextStyle: TextStyle(color: Colors.white),
-                            cellMargin: EdgeInsets.all(2),
+                      child:
+                          StatefulBuilder(builder: (context, setStateOverlay) {
+                        final isDark =
+                            Theme.of(context).brightness == Brightness.dark;
+                        final calendarStyle = CalendarStyle(
+                          todayDecoration: isDark
+                              ? AppTheme.calendarTodayDecorationDark
+                              : AppTheme.calendarTodayDecorationLight,
+                          selectedDecoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
                           ),
-                        ),
-                      const SizedBox(height: 6),
-                      ElevatedButton(
-                        onPressed: () {
-                          // accept and close the overlay, filtering the data below based on the selection
-                          removeFilterOverlay();
-                        },
-                        child: const Text("OK"),
-                      ),
-                    ],
+                          defaultTextStyle: isDark
+                              ? AppTheme.calendarDayTextDark
+                              : AppTheme.calendarDayTextLight,
+                          weekendTextStyle: isDark
+                              ? AppTheme.calendarWeekendTextDark
+                              : AppTheme.calendarWeekendTextLight,
+                          outsideTextStyle: isDark
+                              ? AppTheme.calendarOutsideTextDark
+                              : AppTheme.calendarOutsideTextLight,
+                          selectedTextStyle:
+                              const TextStyle(color: AppTheme.baseWhite),
+                          cellMargin: const EdgeInsets.all(2),
+                        );
+
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.all(12),
+                          child: Container(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // close button aligned top right
+                                SizedBox(
+                                  height: 15,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => removeFilterOverlay(),
+                                          child:
+                                              const Icon(Icons.close, size: 15),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // pill select content
+                                if (filter == TimeFilter.day)
+                                  buildDayCalendar(
+                                    filter: filter,
+                                    focusedDay: focusedDay,
+                                    selectedDay: selectedDay,
+                                    onDaySelected: (selected, focused) {
+                                      setState(() {
+                                        selectedDay = selected;
+                                        focusedDay = focused;
+                                      });
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
+
+                                      // filtering logic
+                                    },
+                                    isDark: isDark,
+                                  ),
+
+                                if (filter == TimeFilter.week)
+                                  buildWeekCalendar(
+                                      focusedDay: focusedDay,
+                                      selectedDay: selectedDay,
+                                      onDaySelected: (selectedDay, focusedDay) {
+                                        // filtering logic
+                                      },
+                                      isDark: isDark,
+                                      calendarStyle: calendarStyle,
+                                      setStateOverlay: () => setStateOverlay(
+                                          () {}), // rebuild the overlay
+                                      setState: (fn) => setState(fn)),
+
+                                if (filter == TimeFilter.month)
+                                  buildMonthView(
+                                    filter: filter,
+                                    focusedMonth: focusedMonth,
+                                    selectedMonth: selectedMonth,
+                                    onSelectedMonth: (selected, focused) {
+                                      setState(() {
+                                        selectedMonth = selected;
+                                        focusedMonth = focused;
+                                      });
+
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
+                                    },
+                                    // filtering logic
+
+                                    isDark: isDark,
+                                    availableData: availableMonthData,
+                                  ),
+
+                                if (filter == TimeFilter.year)
+                                  buildYearView(
+                                    filter: filter,
+                                    focusedYear: focusedYear,
+                                    selectedYear: selectedYear,
+                                    onSelectedYear: (selected, focused) {
+                                      setState(() {
+                                        selectedYear = selected;
+                                        focusedYear = focused;
+                                      });
+
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
+                                    },
+                                    onFocusedYearChanged: (newFocused) {
+                                      setState(() {
+                                        focusedYear = newFocused;
+                                      });
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
+                                    },
+                                    // filtering logic
+
+                                    isDark: isDark,
+                                    availableData: availableYearData,
+                                  ),
+
+                                const SizedBox(height: 6),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    // accept and close the overlay, filtering the data below based on the selection
+                                    removeFilterOverlay();
+                                  },
+                                  child: const Text("OK"),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-        ]),
-      ),
-    );
+              ]),
+            ]));
 
     // insert overlay into the ui
     overlay.insert(tempOverlay);

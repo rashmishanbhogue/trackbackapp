@@ -1,3 +1,5 @@
+// charts.dart, to handle the pie chart and bar graph builds
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -166,7 +168,7 @@ Widget buildBarChart(
                                 y: yValues
                                     .reduce((a, b) => a > b ? a : b)
                                     .toDouble(),
-                                color: Colors.grey.shade400,
+                                color: AppTheme.iconDefaultDark,
                                 strokeWidth: 1,
                                 dashArray: [4, 4],
                               ),
@@ -174,8 +176,8 @@ Widget buildBarChart(
                             HorizontalLine(
                               y: 0,
                               color: theme.brightness == Brightness.dark
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400,
+                                  ? AppTheme.iconDefaultLight
+                                  : AppTheme.iconDefaultDark,
                               strokeWidth: 1,
                               dashArray: [4, 4],
                             ),
@@ -203,8 +205,8 @@ Widget buildBarChart(
                           }(),
                           style: theme.textTheme.bodyMedium!.copyWith(
                               color: theme.brightness == Brightness.dark
-                                  ? Colors.white70
-                                  : Colors.black54),
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -260,8 +262,8 @@ Widget buildPieChart(
                       PieChartSectionData(
                         value: 1,
                         color: theme.brightness == Brightness.dark
-                            ? const Color(0xFF464646)
-                            : const Color(0xFFF5F5F5),
+                            ? AppTheme.pieBackgroundDark
+                            : AppTheme.pieBackgroundLight,
                         title: '',
                         radius: size / 2 - 30, // doughnut hole
                       ),
@@ -277,8 +279,8 @@ Widget buildPieChart(
                     noDataMessage,
                     style: theme.textTheme.bodyMedium!.copyWith(
                       color: theme.brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.black54,
+                          ? AppTheme.textSecondaryDark
+                          : AppTheme.textSecondaryLight,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -314,12 +316,12 @@ Widget buildPieChart(
                   radius: pieRadius, // section thickness
                   titleStyle: theme.textTheme.bodyMedium!.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.black54,
+                    color: AppTheme.textSecondaryLight,
                     shadows: [
                       const Shadow(
                         offset: Offset(0, 0),
                         blurRadius: 3,
-                        color: Colors.black38,
+                        color: AppTheme.textDisabledLight,
                       ),
                     ],
                   ),
