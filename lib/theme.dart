@@ -1,4 +1,8 @@
+// theme.dart, stores app theme and defined custom styles
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class AppTheme {
   static ThemeData lightTheme = ThemeData(
@@ -7,6 +11,8 @@ class AppTheme {
     colorScheme: ColorScheme.light(
       primary: Colors.amber[700]!,
       secondary: Colors.orangeAccent,
+      surfaceContainer: const Color(0xFFF5F5F5),
+      surfaceContainerHigh: const Color(0xFFEEEEEE),
     ),
     scaffoldBackgroundColor: Colors.white,
     fontFamily: 'SF Pro',
@@ -60,6 +66,8 @@ class AppTheme {
     colorScheme: ColorScheme.dark(
       primary: Colors.amber[700]!,
       secondary: Colors.orangeAccent,
+      surfaceContainer: const Color(0xFF1C1C1C),
+      surfaceContainerHigh: const Color(0xFF2E2E2E),
     ),
     scaffoldBackgroundColor: Colors.black,
     textTheme: const TextTheme(
@@ -113,7 +121,50 @@ class AppTheme {
     ),
   );
 
-  // badge Colors (for both themes)
+  // black and white
+  static const Color baseBlack = Colors.black;
+  static const Color baseWhite = Colors.white;
+
+  // light theme text
+  static const Color textTitleLight = Colors.black;
+  static const Color textPrimaryLight = Colors.black87;
+  static const Color textSecondaryLight = Colors.black54;
+  static const Color textDisabledLight = Colors.black38;
+  static const Color textHintLight = Color(0xFF757575); // app bar icon grey
+
+  // dark theme text
+  static const Color textTitleDark = Colors.white;
+  static const Color textPrimaryDark = Colors.white70;
+  static const Color textSecondaryDark = Colors.white60;
+  static const Color textDisabledDark = Colors.white38;
+  static const Color textHintDark = Colors.grey; // or Colors.grey[400]
+
+  // icon colours
+  static const Color iconDefaultLight = Color(0xFF757575); // dark grey
+  static const Color iconDefaultDark = Color(0xFFBDBDBD); // light grey
+
+  static const Color iconDisabledLight = Colors.black38;
+  static const Color iconDisabledDark = Colors.white38;
+
+  // red for deletion
+  static const Color iconDeleteContent = Colors.redAccent;
+
+  // light theme
+  static const Color surfaceLowLight =
+      Color(0xFFF5F5F5); // same as pieBackgroundLight
+  static const Color surfaceHighLight = Color(0xFFEEEEEE); // matches existing
+  static const Color inputFillLight = Color(0xFFEEEEEE); // grey[200]
+  static const Color inputBorderLight = Color(0xFFEEEEEE); // grey[200]
+  static const Color hintTextLight = Color(0xFF757575); // grey[600]
+
+  // dark theme
+  static const Color surfaceLowDark = Color(0xFF1C1C1C); // same as calendar bg
+  static const Color surfaceHighDark = Color(0xFF2E2E2E); // higher layer
+  static const Color inputFillDark = Color(0xFF424242); // grey[800]
+  static const Color inputBorderDark = Color(0xFF424242); // grey[800]
+  static const Color hintTextDark = Color(0xFFBDBDBD); // grey[400]
+
+  // badge colors (for both themes)
   static const Color badgeYellow = Color(0xFFFAEA82);
   static const Color badgeGreen = Color(0xFF85F981);
   static const Color badgeBlue = Color(0xFF82E1FB);
@@ -121,14 +172,14 @@ class AppTheme {
   static const Color badgeRed = Color(0xFFFE8486);
   static const Color badgeGrey = Color(0xFFE2E1DD);
 
-  // Chart Line Color
+  // chart lines
   static const Color chartDashedLine = Color(0xFFBDBDBD); // from grey.shade400
 
-  // Pie Chart Background (No Data)
+  // pie chart background
   static const Color pieBackgroundDark = Color(0xFF464646);
   static const Color pieBackgroundLight = Color(0xFFF5F5F5);
 
-  // Text Styles
+  // pie and bar text styles
   static const TextStyle chartAxisLabelStyle = TextStyle(fontSize: 10);
   static const TextStyle noDataTextStyle = TextStyle(
     fontSize: 16,
@@ -174,7 +225,7 @@ class AppTheme {
   static const Color idleLight = Color(0xFFE0E0E0); // Colors.grey[300]
   static const Color idleDark = Color(0xFFBDBDBD); // Colors.grey[400]
 
-  // Lighter background variants (for expanded tiles, etc.)
+  // lighter background variants (for expanded tiles, etc.)
   static const Color productiveLightest = Color(0xFFE3F2FD); // Colors.blue[50]
   static const Color productiveDarkest =
       Color(0xFFB3E5FC); // Colors.blue[100] again
@@ -194,4 +245,134 @@ class AppTheme {
 
   static const Color idleLightest = Color(0xFFEEEEEE); // Colors.grey[200]
   static const Color idleDarkest = Color(0xFFE0E0E0); // Colors.grey[300]
+
+  // current month/ year dot
+  static const currentDotColor = Colors.lightBlueAccent;
+
+  static const Color greyDark = Color(0xFF616161); // grey[700]
+
+  // table calendar styles
+  // light theme
+  static const Color weekHighlightLight = Color(0xFFFFE0B2); // orange[100]
+  static const BoxDecoration calendarTodayDecorationLight = BoxDecoration(
+    color: Colors.lightBlueAccent,
+    shape: BoxShape.circle,
+  );
+  static const BoxDecoration calendarRangeHighlightLight = BoxDecoration(
+    color: weekHighlightLight,
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+  );
+  static const TextStyle calendarDayTextLight = TextStyle(
+    fontSize: 12,
+    color: Colors.black87,
+  );
+  static const TextStyle calendarWeekendTextLight = TextStyle(
+    fontSize: 12,
+    color: Colors.orange,
+  );
+  static const TextStyle calendarOutsideTextLight = TextStyle(
+    fontSize: 12,
+    color: Colors.black26,
+  );
+  static const HeaderStyle calendarHeaderLight = HeaderStyle(
+    formatButtonVisible: false,
+    titleCentered: true,
+    titleTextStyle: TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: Colors.black54,
+    ),
+    leftChevronIcon:
+        Icon(Icons.chevron_left, size: 20, color: Color(0xFF757575)),
+    rightChevronIcon:
+        Icon(Icons.chevron_right, size: 18, color: AppTheme.idleDarkest),
+  );
+  static final DaysOfWeekStyle calendarDaysOfWeekLight = DaysOfWeekStyle(
+    dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
+    weekdayStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: Colors.black38,
+    ),
+    weekendStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: Colors.orange,
+    ),
+  );
+  static const BoxDecoration calendarSelectedDecorationLight = BoxDecoration(
+    color: Colors.orange,
+    shape: BoxShape.circle,
+  );
+  static const CalendarStyle calendarStyleLight = CalendarStyle(
+    selectedDecoration: BoxDecoration(),
+    todayDecoration: calendarTodayDecorationLight,
+    rangeHighlightColor: weekHighlightLight,
+    rangeHighlightScale: 1.0,
+    defaultTextStyle: calendarDayTextLight,
+    weekendTextStyle: calendarWeekendTextLight,
+    outsideTextStyle: calendarOutsideTextLight,
+  );
+
+  // dark theme
+  static const Color weekHighlightDark = Color(0xFFFFCC80); // orange[200]
+  static const BoxDecoration calendarTodayDecorationDark = BoxDecoration(
+    color: Colors.lightBlueAccent,
+    shape: BoxShape.circle,
+  );
+  static const BoxDecoration calendarRangeHighlightDark = BoxDecoration(
+    color: weekHighlightDark,
+    borderRadius: BorderRadius.all(Radius.circular(12)),
+  );
+  static const TextStyle calendarDayTextDark = TextStyle(
+    fontSize: 12,
+    color: Colors.white70,
+  );
+  static const TextStyle calendarWeekendTextDark = TextStyle(
+    fontSize: 12,
+    color: Colors.orange,
+  );
+  static const TextStyle calendarOutsideTextDark = TextStyle(
+    fontSize: 12,
+    color: Colors.white30,
+  );
+  static const HeaderStyle calendarHeaderDark = HeaderStyle(
+    formatButtonVisible: false,
+    titleCentered: true,
+    titleTextStyle: TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Colors.white70,
+    ),
+    leftChevronIcon:
+        Icon(Icons.chevron_left, size: 20, color: Color(0xFFB0B0B0)),
+    rightChevronIcon:
+        Icon(Icons.chevron_right, size: 18, color: Color(0xFF757575)),
+  );
+  static final DaysOfWeekStyle calendarDaysOfWeekDark = DaysOfWeekStyle(
+    dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
+    weekdayStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: Colors.white54,
+    ),
+    weekendStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: Colors.orange,
+    ),
+  );
+  static const BoxDecoration calendarSelectedDecorationDark = BoxDecoration(
+    color: Colors.orange,
+    shape: BoxShape.circle,
+  );
+  static const CalendarStyle calendarStyleDark = CalendarStyle(
+    selectedDecoration: BoxDecoration(),
+    todayDecoration: calendarTodayDecorationDark,
+    rangeHighlightColor: weekHighlightDark,
+    rangeHighlightScale: 1.0,
+    defaultTextStyle: calendarDayTextDark,
+    weekendTextStyle: calendarWeekendTextDark,
+    outsideTextStyle: calendarOutsideTextDark,
+  );
 }
