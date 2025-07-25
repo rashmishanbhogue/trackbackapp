@@ -1,8 +1,10 @@
+// theme_provider.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme.dart';
 
-final ThemeProvider = StateNotifierProvider<ThemeNotifier, ThemeData>((ref) {
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeData>((ref) {
   return ThemeNotifier();
 });
 

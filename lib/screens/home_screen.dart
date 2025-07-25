@@ -8,7 +8,9 @@ import 'settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
 import '../widgets/badges_svg.dart';
+import '../widgets/expandable_chips.dart';
 import '../models/entry.dart';
+import '../theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -69,7 +71,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   : Icons.light_mode,
             ),
             onPressed: () {
-              ref.read(ThemeProvider.notifier).toggleTheme();
+              ref.read(themeProvider.notifier).toggleTheme();
             },
           ),
         ),
@@ -151,211 +153,29 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Text("Previous Days", style: TextStyle(fontSize: 20)),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              SliverList(
-                delegate: SliverChildListDelegate(
-                  groupedByMonth.entries.expand((entry) {
-                    final isCurrent = entry.key == currentMonth;
-                    final monthYear = DateFormat('MMMM yyyy')
-                        .format(DateTime.parse('${entry.key}-01'));
-
-                    final List<Widget> widgets = [];
-
-                    if (!isCurrent) {
-                      monthVisibility.putIfAbsent(entry.key, () => false);
-
-                      widgets.add(
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              monthVisibility[entry.key] =
-                                  !(monthVisibility[entry.key] ?? false);
-                            });
-                          },
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  monthYear,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.color,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.expand_more,
-                                  size: 18,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.color,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final shouldShow =
-                        isCurrent || (monthVisibility[entry.key] ?? false);
-
-                    if (shouldShow) {
-                      widgets.addAll(entry.value.map((date) {
-                        final formattedDate = DateFormat('dd-MMM-yyyy')
-                            .format(DateTime.parse(date));
-                        final tileKey = expansionTileKeys.putIfAbsent(
-                            date, () => GlobalKey());
-                        final index = previousDates.indexOf(date);
-                        final count = dateEntries[date]?.length ?? 0;
-                        final isExpanded = expandedChipIndex == index;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Dismissible(
-                            key: Key(date),
-                            direction: DismissDirection.endToStart,
-                            background: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppTheme.iconDeleteContent,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                alignment: Alignment.centerRight,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                child: const Icon(Icons.delete,
-                                    color: AppTheme.baseWhite),
-                              ),
-                            ),
-                            confirmDismiss: (direction) async {
-                              return await showDeleteConfirmationDialog(
-                                  context, date, ref);
-                            },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: index.isEven
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainer
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHigh,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Column(
-                                  key: tileKey,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ListTile(
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              vertical: 16, horizontal: 16),
-                                      title: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            formattedDate,
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.light
-                                                  ? AppTheme.textPrimaryLight
-                                                  : AppTheme.textPrimaryDark,
-                                            ),
-                                          ),
-                                          const Expanded(
-                                              child: SizedBox(width: 0)),
-                                          buildBadge(count),
-                                        ],
-                                      ),
-                                      onTap: () {
-                                        setState(() {
-                                          expandedChipIndex =
-                                              isExpanded ? null : index;
-                                        });
-                                        if (!isExpanded) {
-                                          WidgetsBinding.instance
-                                              .addPostFrameCallback((_) {
-                                            final ctx = tileKey.currentContext;
-                                            if (ctx != null) {
-                                              final renderBox =
-                                                  ctx.findRenderObject()
-                                                      as RenderBox;
-                                              final position = renderBox
-                                                  .localToGlobal(Offset.zero)
-                                                  .dy;
-                                              final screenHeight =
-                                                  MediaQuery.of(ctx)
-                                                      .size
-                                                      .height;
-                                              final isTooLow =
-                                                  position > screenHeight * 0.6;
-                                              Scrollable.ensureVisible(
-                                                ctx,
-                                                duration: const Duration(
-                                                    milliseconds: 400),
-                                                curve: Curves.easeInOut,
-                                                alignment:
-                                                    isTooLow ? 0.05 : 0.1,
-                                              );
-                                            }
-                                          });
-                                        }
-                                      },
-                                    ),
-                                    if (isExpanded)
-                                      ...(dateEntries[date] ?? []).map((entry) {
-                                        return GestureDetector(
-                                          behavior: HitTestBehavior.opaque,
-                                          onTap: () {
-                                            setState(() {
-                                              expandedChipIndex = null;
-                                            });
-                                          },
-                                          child: ListTile(
-                                            title: Text(
-                                              entry.text,
-                                              style: TextStyle(
-                                                color: Theme.of(context)
-                                                            .brightness ==
-                                                        Brightness.light
-                                                    ? Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge
-                                                        ?.color
-                                                    : Theme.of(context)
-                                                        .textTheme
-                                                        .bodyMedium
-                                                        ?.color,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }));
-                    }
-
-                    return widgets;
-                  }).toList(),
-                ),
-              ),
+              HomeExpansionTiles(
+                  groupedByMonth: groupedByMonth,
+                  dateEntries: dateEntries,
+                  previousDates: previousDates,
+                  monthVisibility: monthVisibility,
+                  expandedChipIndex: expandedChipIndex,
+                  onChipTap: (index) {
+                    setState(() {
+                      expandedChipIndex = index;
+                    });
+                  },
+                  onDelete: (date) {
+                    showDeleteConfirmationDialog(context, date, ref);
+                  },
+                  onMonthToggle: (monthKey) {
+                    setState(() {
+                      monthVisibility[monthKey] =
+                          !(monthVisibility[monthKey] ?? false);
+                    });
+                  },
+                  expansionTileKeys: expansionTileKeys,
+                  currentMonth: currentMonth,
+                  ref: ref)
             ],
           ),
         ),

@@ -21,7 +21,7 @@ class SettingsScreen extends ConsumerWidget {
                   : Icons.light_mode,
             ),
             onPressed: () {
-              ref.read(ThemeProvider.notifier).toggleTheme();
+              ref.read(themeProvider.notifier).toggleTheme();
             },
           ),
         ),

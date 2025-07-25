@@ -253,7 +253,7 @@ class AppTheme {
 
   // table calendar styles
   // light theme
-  static const Color weekHighlightLight = Color(0xFFFFE0B2); // orange[100]
+  static const Color weekHighlightLight = Color(0xFFFEAD34);
   static const BoxDecoration calendarTodayDecorationLight = BoxDecoration(
     color: Colors.lightBlueAccent,
     shape: BoxShape.circle,
@@ -275,18 +275,20 @@ class AppTheme {
     color: Colors.black26,
   );
   static const HeaderStyle calendarHeaderLight = HeaderStyle(
-    formatButtonVisible: false,
-    titleCentered: true,
-    titleTextStyle: TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      color: Colors.black54,
-    ),
-    leftChevronIcon:
-        Icon(Icons.chevron_left, size: 20, color: Color(0xFF757575)),
-    rightChevronIcon:
-        Icon(Icons.chevron_right, size: 18, color: AppTheme.idleDarkest),
-  );
+      formatButtonVisible: false,
+      titleCentered: true,
+      titleTextStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.black54,
+      ),
+      leftChevronIcon:
+          Icon(Icons.chevron_left, size: 20, color: Color(0xFF757575)),
+      rightChevronIcon: Icon(
+        Icons.chevron_right,
+        size: 20,
+        color: Color(0xFF757575),
+      ));
   static final DaysOfWeekStyle calendarDaysOfWeekLight = DaysOfWeekStyle(
     dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
     weekdayStyle: const TextStyle(
@@ -315,7 +317,7 @@ class AppTheme {
   );
 
   // dark theme
-  static const Color weekHighlightDark = Color(0xFFFFCC80); // orange[200]
+  static const Color weekHighlightDark = Color(0xFFF7B450);
   static const BoxDecoration calendarTodayDecorationDark = BoxDecoration(
     color: Colors.lightBlueAccent,
     shape: BoxShape.circle,
@@ -347,7 +349,7 @@ class AppTheme {
     leftChevronIcon:
         Icon(Icons.chevron_left, size: 20, color: Color(0xFFB0B0B0)),
     rightChevronIcon:
-        Icon(Icons.chevron_right, size: 18, color: Color(0xFF757575)),
+        Icon(Icons.chevron_right, size: 20, color: Color(0xFFB0B0B0)),
   );
   static final DaysOfWeekStyle calendarDaysOfWeekDark = DaysOfWeekStyle(
     dowTextFormatter: (date, locale) => DateFormat.E(locale).format(date)[0],
@@ -375,4 +377,56 @@ class AppTheme {
     weekendTextStyle: calendarWeekendTextDark,
     outsideTextStyle: calendarOutsideTextDark,
   );
+
+  // aimetrics background expansion chip parent darker colour
+  static Color getCategoryColor(String category, bool isDark) {
+    switch (category) {
+      case 'Productive':
+        return isDark ? AppTheme.productiveDark : AppTheme.productiveLight;
+      case 'Maintenance':
+        return isDark ? AppTheme.maintenanceDark : AppTheme.maintenanceLight;
+      case 'Wellbeing':
+        return isDark ? AppTheme.wellbeingDark : AppTheme.wellbeingLight;
+      case 'Leisure':
+        return isDark ? AppTheme.leisureDark : AppTheme.leisureLight;
+      case 'Social':
+        return isDark ? AppTheme.socialDark : AppTheme.socialLight;
+      case 'Idle':
+        return isDark ? AppTheme.idleDark : AppTheme.idleLight;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  // aimetrics background expansion chip entries lighter colour
+  static Color getLighterCategoryColor(String category, bool isDark) {
+    switch (category) {
+      case 'Productive':
+        return isDark
+            ? AppTheme.productiveDarkest
+            : AppTheme.productiveLightest;
+      case 'Maintenance':
+        return isDark
+            ? AppTheme.maintenanceDarkest
+            : AppTheme.maintenanceLightest;
+      case 'Wellbeing':
+        return isDark
+            ? AppTheme.maintenanceDarkest
+            : AppTheme.wellbeingLightest;
+      case 'Leisure':
+        return isDark ? AppTheme.leisureDarkest : AppTheme.leisureLightest;
+      case 'Social':
+        return isDark ? AppTheme.socialDarkest : AppTheme.socialLightest;
+      case 'Idle':
+        return isDark ? AppTheme.idleDarkest : AppTheme.idleLightest;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
+  // homescreen background expansion chip alternate shades colour - dark + light theme
+  static Color getHomeTileColor(int index, BuildContext context) {
+    final theme = Theme.of(context).colorScheme;
+    return index.isEven ? theme.surfaceContainer : theme.surfaceContainerHigh;
+  }
 }

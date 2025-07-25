@@ -61,8 +61,8 @@ class MonthView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.orangeAccent
-              : (isDark ? AppTheme.maintenanceDark : AppTheme.maintenanceLight),
+              ? AppTheme.weekHighlightDark
+              : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Stack(
@@ -75,8 +75,10 @@ class MonthView extends StatelessWidget {
               style: TextStyle(
                 fontSize: isSelected ? 15 : 14,
                 color: isSelected
-                    ? Colors.white
-                    : (isDark ? Colors.black54 : Colors.black54),
+                    ? AppTheme.baseWhite
+                    : (isDark
+                        ? AppTheme.textSecondaryDark
+                        : AppTheme.textSecondaryLight),
               ),
             ),
             // blue dot for current month
@@ -136,7 +138,9 @@ class MonthView extends StatelessWidget {
             IconButton(
                 icon: const Icon(Icons.chevron_left),
                 iconSize: 18,
-                color: isDark ? Colors.white70 : Colors.black54,
+                color: isDark
+                    ? AppTheme.iconDefaultDark
+                    : AppTheme.iconDefaultLight,
                 onPressed: () {
                   // move back 1 year
                   onSelectedMonth(
@@ -150,7 +154,9 @@ class MonthView extends StatelessWidget {
                 'This Year',
                 style: TextStyle(
                   fontSize: 14,
-                  color: isDark ? Colors.white70 : Colors.black54,
+                  color: isDark
+                      ? AppTheme.textPrimaryDark
+                      : AppTheme.textPrimaryLight,
                 ),
               )
             else
@@ -159,7 +165,9 @@ class MonthView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   // fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white70 : Colors.black54,
+                  color: isDark
+                      ? AppTheme.textSecondaryDark
+                      : AppTheme.textSecondaryLight,
                 ),
               ),
             // disable if current year
@@ -167,8 +175,10 @@ class MonthView extends StatelessWidget {
               icon: const Icon(Icons.chevron_right),
               iconSize: 18,
               color: (focusedMonth.year == DateTime.now().year)
-                  ? (isDark ? Colors.grey.shade700 : Colors.grey.shade400)
-                  : (isDark ? Colors.white70 : Colors.black54),
+                  ? (isDark ? AppTheme.greyDark : AppTheme.idleDark)
+                  : (isDark
+                      ? AppTheme.iconDefaultDark
+                      : AppTheme.iconDefaultLight),
               onPressed: () {
                 if (focusedMonth.year == DateTime.now().year) {
                   // do nothing
@@ -269,10 +279,10 @@ class YearView extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.orangeAccent
+                ? AppTheme.weekHighlightDark
                 : (isDark
-                    ? AppTheme.maintenanceDark
-                    : AppTheme.maintenanceLight),
+                    ? AppTheme.surfaceHighDark
+                    : AppTheme.surfaceHighLight),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Stack(
@@ -286,8 +296,10 @@ class YearView extends StatelessWidget {
                   fontSize: isSelected ? 16 : 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected
-                      ? Colors.white
-                      : (isDark ? Colors.white70 : Colors.black87),
+                      ? AppTheme.baseWhite
+                      : (isDark
+                          ? AppTheme.textPrimaryDark
+                          : AppTheme.textPrimaryLight),
                 ),
               ),
               if (isCurrent)
@@ -326,7 +338,9 @@ class YearView extends StatelessWidget {
             IconButton(
                 icon: const Icon(Icons.chevron_left),
                 iconSize: 18,
-                color: isDark ? Colors.white70 : Colors.black54,
+                color: isDark
+                    ? AppTheme.iconDefaultDark
+                    : AppTheme.iconDefaultLight,
                 onPressed: () {
                   final previousDecade = DateTime(focusedYear.year - 10);
                   onFocusedYearChanged(previousDecade);
@@ -335,15 +349,19 @@ class YearView extends StatelessWidget {
               labelText, // 'This Decade' or 2000s, 1990s, etc
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? Colors.white70 : Colors.black54,
+                color: isDark
+                    ? AppTheme.textPrimaryDark
+                    : AppTheme.textPrimaryLight,
               ),
             ),
             IconButton(
                 icon: const Icon(Icons.chevron_right),
                 iconSize: 18,
                 color: (focusedYear.year == DateTime.now().year)
-                    ? (isDark ? Colors.grey.shade700 : AppTheme.idleDark)
-                    : (isDark ? Colors.white70 : Colors.black54),
+                    ? (isDark ? AppTheme.greyDark : AppTheme.idleDark)
+                    : (isDark
+                        ? AppTheme.iconDefaultDark
+                        : AppTheme.iconDefaultLight),
                 onPressed: () {
                   final nextDecade = DateTime(focusedYear.year + 10);
                   if (focusedYear.year + 10 > DateTime.now().year) {
