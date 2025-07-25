@@ -129,7 +129,11 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
         return DateFormat('MMMM').format(referenceDate);
       }
     } else if (viewType == 'Year') {
-      return referenceDate.year.toString();
+      if (referenceDate.year == now.year) {
+        return 'This Year';
+      } else {
+        return referenceDate.year.toString();
+      }
     }
     return '';
   }
@@ -231,7 +235,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
           child: IconButton(
             icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
             onPressed: () {
-              ref.read(ThemeProvider.notifier).toggleTheme();
+              ref.read(themeProvider.notifier).toggleTheme();
             },
           ),
         ),

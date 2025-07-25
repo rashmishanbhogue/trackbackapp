@@ -10,7 +10,7 @@ class TrackBackApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = ref.watch(ThemeProvider);
+    final theme = ref.watch(themeProvider);
 
     return MaterialApp(
       title: 'Trackback',

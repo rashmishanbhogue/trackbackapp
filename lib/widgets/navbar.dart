@@ -1,3 +1,5 @@
+// navbar.dart, app's custom navbar with 3 navigations
+
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/dashboard_screen.dart';

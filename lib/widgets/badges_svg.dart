@@ -1,4 +1,4 @@
-// badges_svg.dart
+// badges_svg.dart, badge count logic and svg details
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/widgets.dart';

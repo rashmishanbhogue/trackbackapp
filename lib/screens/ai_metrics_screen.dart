@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:trackbackapp/widgets/expandable_chips.dart';
 import 'settings_screen.dart';
+import '../utils/week_selection_utils.dart';
 import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
+import '../services/groq_service.dart';
 import '../models/entry.dart';
-import '../utils/ai_labeling.dart';
 import '../utils/hive_utils.dart';
 import '../utils/constants.dart';
 import '../utils/calendar_utils.dart';
@@ -32,18 +34,27 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   String? expandedCategory;
   OverlayEntry? filterOverlayEntry;
 
+  final Map<String, GlobalKey> categoryKeys = {
+    for (var c in standardCategories) c: GlobalKey()
+  };
+
   DateTime selectedDay = DateTime.now();
   DateTime focusedDay = DateTime.now();
 
+  DateTime? focusedWeek;
+  DateTime? selectedWeek;
   DateTime rangeStartDay = DateTime.now();
   DateTime rangeEndDay = DateTime.now();
 
   DateTime focusedMonth = DateTime.now();
-  DateTime? selectedMonth;
+  DateTime selectedMonth = DateTime.now();
   Set<DateTime> availableMonthData = {};
 
   DateTime focusedYear = DateTime.now();
-  DateTime? selectedYear;
+  DateTime selectedYear = DateTime.now();
+
+  DateTime currentVisibleMonth = DateTime.now();
+
   Set<DateTime> availableYearData = {};
 
   TimeFilter selectedFilter = TimeFilter.all;
@@ -55,6 +66,17 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   void initState() {
     super.initState();
     loadStoredMetrics(); // load the metrics immediately on page load
+    final now = DateTime.now();
+    final normalizedNow = DateTime(now.year, now.month, now.day);
+
+    focusedDay = now;
+    selectedDay = now;
+
+    rangeStartDay = normalizedNow;
+    rangeEndDay = normalizedNow.add(const Duration(days: 6));
+
+    selectedWeek = updateWeekRange(normalizedNow);
+    focusedWeek = normalizedNow;
   }
 
   @override
@@ -108,7 +130,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     for (final entry in allEntries) {
       String label = entry.label;
       if (label.isEmpty) {
-        label = await classifyEntry(entry.text);
+        label = await GroqService.classifySingleText(entry.text);
       }
 
       final validLabel = label.isNotEmpty ? label : 'Uncategorized';
@@ -140,7 +162,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   String getBroaderCategory(String label) {
     if (standardCategories.contains(label)) {
-      label;
+      return label;
     }
     return 'Uncategorized';
   }
@@ -160,7 +182,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
               isDark ? Icons.light_mode : Icons.dark_mode,
             ),
             onPressed: () {
-              ref.read(ThemeProvider.notifier).toggleTheme();
+              ref.read(themeProvider.notifier).toggleTheme();
             },
           ),
         ),
@@ -230,175 +252,23 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              ...standardCategories.map((category) {
-                final count = labelCounts[category] ?? 0;
-                final entries = (labelToEntries[category] ?? [])
-                  ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      setState(() {
-                        expandedCategory = null;
-                      });
-                    },
-                    child: ExpansionTile(
-                      initiallyExpanded: expandedCategory == category,
-                      tilePadding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      collapsedShape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      trailing: const SizedBox.shrink(),
-                      title: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: getCategoryColor(category, isDark),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: isRefreshing
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    '$category: $count',
-                                    style: const TextStyle(
-                                      color: AppTheme.textPrimaryLight,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppTheme.baseBlack),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Center(
-                                child: Text(
-                                  '$category: $count',
-                                  style: const TextStyle(
-                                    color: AppTheme.textPrimaryLight,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                      ),
-                      children: entries.isNotEmpty
-                          ? [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: getLighterCategoryColor(
-                                            category, isDark),
-                                        borderRadius: const BorderRadius.only(
-                                          bottomLeft: Radius.circular(30),
-                                          bottomRight: Radius.circular(30),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: entries.map((entry) {
-                                          return ListTile(
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 16),
-                                            title: Text(
-                                              entry.text,
-                                              style: const TextStyle(
-                                                  color: AppTheme
-                                                      .textPrimaryLight),
-                                            ),
-                                            subtitle: Text(
-                                              DateFormat('dd MMM, HH:mm')
-                                                  .format(entry.timestamp),
-                                              style: const TextStyle(
-                                                  color: AppTheme
-                                                      .textSecondaryLight),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 28),
-                                ],
-                              ),
-                            ]
-                          : [
-                              const Padding(
-                                padding: EdgeInsets.all(8),
-                                child:
-                                    Text('No entries found for this category.'),
-                              ),
-                            ],
-                    ),
-                  ),
-                );
-              }),
+              AiMetricsExpansionTiles(
+                labelToEntries: labelToEntries,
+                expandedCategory: expandedCategory,
+                isRefreshing: isRefreshing,
+                onTap: (category) {
+                  setState(() {
+                    expandedCategory = category;
+                  });
+                },
+                isDark: isDark,
+                categoryKeys: categoryKeys,
+              )
             ],
           ),
         ),
       ),
     );
-  }
-
-  // background expansion chip colour
-  Color getCategoryColor(String category, bool isDark) {
-    switch (category) {
-      case 'Productive':
-        return isDark ? AppTheme.productiveDark : AppTheme.productiveLight;
-      case 'Maintenance':
-        return isDark ? AppTheme.maintenanceDark : AppTheme.maintenanceLight;
-      case 'Wellbeing':
-        return isDark ? AppTheme.wellbeingDark : AppTheme.wellbeingLight;
-      case 'Leisure':
-        return isDark ? AppTheme.leisureDark : AppTheme.leisureLight;
-      case 'Social':
-        return isDark ? AppTheme.socialDark : AppTheme.socialLight;
-      case 'Idle':
-        return isDark ? AppTheme.idleDark : AppTheme.idleLight;
-      default:
-        return Colors.grey.shade200;
-    }
-  }
-
-  // background expansion chip entries lighter colour
-  Color getLighterCategoryColor(String category, bool isDark) {
-    switch (category) {
-      case 'Productive':
-        return isDark
-            ? AppTheme.productiveDarkest
-            : AppTheme.productiveLightest;
-      case 'Maintenance':
-        return isDark
-            ? AppTheme.maintenanceDarkest
-            : AppTheme.maintenanceLightest;
-      case 'Wellbeing':
-        return isDark
-            ? AppTheme.maintenanceDarkest
-            : AppTheme.wellbeingLightest;
-      case 'Leisure':
-        return isDark ? AppTheme.leisureDarkest : AppTheme.leisureLightest;
-      case 'Social':
-        return isDark ? AppTheme.socialDarkest : AppTheme.socialLightest;
-      case 'Idle':
-        return isDark ? AppTheme.idleDarkest : AppTheme.idleLightest;
-      default:
-        return Colors.grey.shade100;
-    }
   }
 
   Widget buildFilterChips(ThemeData theme, bool isDark) {
@@ -483,13 +353,13 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                         entries: entries);
                   },
                   backgroundColor: Colors.transparent,
-                  selectedColor: theme.colorScheme.primary.withAlpha(153),
+                  selectedColor: AppTheme.weekHighlightDark,
                   shape: StadiumBorder(
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
-                          // theme.colorScheme.primary
-                          : Colors.grey.shade400,
+                          : AppTheme.weekHighlightDark,
+                      // : AppTheme.textHintDark,
                       width: 1.2,
                     ),
                   ),
@@ -555,6 +425,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     // const double overlayHeight = 300;
     double leftPosition;
 
+    bool hasInitializedWeek = false;
+
     // if the chip is the last one (far right), align overlay to its right edge
     // otherwise center overlay under the respective chip
     if (alignRight) {
@@ -619,6 +491,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                           cellMargin: const EdgeInsets.all(2),
                         );
 
+                        if (filter == TimeFilter.week && !hasInitializedWeek) {
+                          hasInitializedWeek = true;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            updateWeekRange(focusedDay);
+                            setState(() {});
+                            setStateOverlay(() {});
+                          });
+                        }
+
                         return SingleChildScrollView(
                           padding: const EdgeInsets.all(12),
                           child: Container(
@@ -655,26 +536,41 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                         selectedDay = selected;
                                         focusedDay = focused;
                                       });
-                                      setStateOverlay(
-                                          () {}); // rebuild the overlay
-
-                                      // filtering logic
+                                      setStateOverlay(() {});
                                     },
                                     isDark: isDark,
+                                    currentVisibleMonth: currentVisibleMonth,
+                                    onVisibleMonthChanged: (newMonth) {
+                                      setState(() {
+                                        currentVisibleMonth = newMonth;
+                                      });
+                                    },
+                                    setState: (fn) => setState(fn),
                                   ),
 
                                 if (filter == TimeFilter.week)
                                   buildWeekCalendar(
-                                      focusedDay: focusedDay,
-                                      selectedDay: selectedDay,
-                                      onDaySelected: (selectedDay, focusedDay) {
-                                        // filtering logic
-                                      },
-                                      isDark: isDark,
-                                      calendarStyle: calendarStyle,
-                                      setStateOverlay: () => setStateOverlay(
-                                          () {}), // rebuild the overlay
-                                      setState: (fn) => setState(fn)),
+                                    currentVisibleMonth: currentVisibleMonth,
+                                    onVisibleMonthChanged: (newMonth) {
+                                      setState(() {
+                                        currentVisibleMonth = newMonth;
+                                      });
+                                    },
+                                    focusedWeek: focusedWeek ?? DateTime.now(),
+                                    selectedWeek: selectedWeek,
+                                    onWeekSelected: (selected, focused) {
+                                      setState(() {
+                                        selectedWeek = selected;
+                                        focusedWeek = focused;
+                                      });
+                                      setStateOverlay(() {});
+                                    },
+                                    isDark: isDark,
+                                    calendarStyle: calendarStyle,
+                                    setStateOverlay: () =>
+                                        setStateOverlay(() {}),
+                                    setState: (fn) => setState(fn),
+                                  ),
 
                                 if (filter == TimeFilter.month)
                                   buildMonthView(
