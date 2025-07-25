@@ -162,7 +162,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   String getBroaderCategory(String label) {
     if (standardCategories.contains(label)) {
-      return label;
+      label;
     }
     return 'Uncategorized';
   }
