@@ -3,10 +3,12 @@
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/dashboard_screen.dart';
-import '../screens/ai_metrics_screen.dart';
+import '../screens/aimetrics_screen.dart';
 import '../screens/settings_screen.dart';
 
 class CustomNavBar extends StatefulWidget {
+  const CustomNavBar({super.key});
+
   @override
   CustomNavBarState createState() => CustomNavBarState();
 }

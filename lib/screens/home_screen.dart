@@ -3,12 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:trackbackapp/theme.dart';
-import 'settings_screen.dart';
-import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
+import '../utils/home_dialog_utils.dart';
+import '../widgets/custom_appbar.dart';
+import '../widgets/custom_fab.dart';
 import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
+import '../widgets/home_entries_list.dart';
 import '../models/entry.dart';
 import '../theme.dart';
 
@@ -60,38 +61,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TrackBack'),
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.light
-                  ? Icons.dark_mode
-                  : Icons.light_mode,
-            ),
-            onPressed: () {
-              ref.read(themeProvider.notifier).toggleTheme();
-            },
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      appBar: const CustomAppBar(),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
@@ -180,7 +150,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: CustomFAB(
         onPressed: () {
           if (controller.text.trim().isNotEmpty) {
             ref.read(dateEntriesProvider.notifier).addEntry(
@@ -200,97 +170,4 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-}
-
-Widget buildEntriesForDate(WidgetRef ref, String date) {
-  final dateEntries = ref.watch(dateEntriesProvider);
-  List<Entry>? entries = dateEntries[date];
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const SizedBox(height: 8),
-      if (entries != null && entries.isNotEmpty)
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: entries.length,
-          itemBuilder: (context, index) {
-            final reversedEntry = entries.reversed.toList()[index];
-            return ListTile(
-              contentPadding: const EdgeInsets.only(left: 12, right: 0),
-              title: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '•    ',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyLarge!.color,
-                      ),
-                    ),
-                    TextSpan(
-                      text: reversedEntry.text,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.normal,
-                        color: Theme.of(context).textTheme.bodyLarge!.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              trailing: IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon:
-                    const Icon(Icons.remove, color: AppTheme.iconDeleteContent),
-                onPressed: () {
-                  ref
-                      .read(dateEntriesProvider.notifier)
-                      .removeEntry(date, reversedEntry);
-                },
-              ),
-            );
-          },
-        )
-      else
-        const Text("No entries yet."),
-      const SizedBox(height: 8),
-    ],
-  );
-}
-
-Widget buildBadge(int count) {
-  return BadgesSVG.getBadge(count);
-}
-
-Future<bool?> showDeleteConfirmationDialog(
-    BuildContext context, String date, WidgetRef ref) {
-  return showDialog<bool>(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('Delete Entries?'),
-        content: const Text(
-            'Are you sure you want to delete all entries for this date?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              ref.read(dateEntriesProvider.notifier).removeEntriesForDate(date);
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Delete'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false);
-            },
-            child: const Text('Cancel'),
-          ),
-        ],
-      );
-    },
-  );
 }

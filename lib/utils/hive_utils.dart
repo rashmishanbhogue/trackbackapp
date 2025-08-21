@@ -1,6 +1,7 @@
-// hive_utils.dart
+// hive_utils.dart, helper methods to store/retrieve data from hive and flatten entries
 
 import 'package:hive/hive.dart';
+import '../models/entry.dart';
 
 Future<void> storeLabelsInHive(Map<String, int> labelCounts) async {
   final box = await Hive.openBox('labelsBox');
@@ -37,4 +38,9 @@ Future<DateTime?> getLastUpdatedFromHive() async {
         storedTimestamp); // convert from ISO string to DateTime
   }
   return null; // null if not found
+}
+
+// flatten Map<String, List<Entry>> to List<Entry>
+List<Entry> flattenEntries(Map<String, List<Entry>> dateEntriesMap) {
+  return dateEntriesMap.values.expand((list) => list).toList();
 }
