@@ -29,3 +29,7 @@ class BadgesSVG {
     );
   }
 }
+
+Widget buildBadge(int count) {
+  return BadgesSVG.getBadge(count);
+}

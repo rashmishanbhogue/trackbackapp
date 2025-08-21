@@ -1,10 +1,11 @@
-// charts.dart, to handle the pie chart and bar graph builds
+// dashboard_charts.dart, to handle the pie chart and bar graph builds
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/entry.dart';
 import '../theme.dart';
+import '../metrics/dashboard_metrics_utils.dart';
 
 Widget buildBarChart(
   BuildContext context,
@@ -17,11 +18,11 @@ Widget buildBarChart(
   List<String> xLabels = [];
   List<int> yValues = [];
 
-  final filteredEntries =
+  final filteredDates =
       filterEntriesByViewType(entries, viewType, selectedDate: referenceDate);
 
   final Map<String, int> data = {};
-  for (var entry in filteredEntries) {
+  for (var entry in filteredDates) {
     String key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
     if (key.isNotEmpty) {
       data[key] = (data[key] ?? 0) + 1;
@@ -225,6 +226,7 @@ Widget buildPieChart(
   BuildContext context,
   Map<String, int> badgeCountMap,
   String viewType,
+  DateTime referenceDate,
 ) {
   final theme = Theme.of(context);
   final total = badgeCountMap.values.fold(0, (a, b) => a + b);

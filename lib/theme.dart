@@ -21,6 +21,7 @@ class AppTheme {
           fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: -1.2),
       headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
       titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       bodyLarge: TextStyle(fontSize: 16, color: Colors.black87),
       bodyMedium: TextStyle(fontSize: 14, color: Colors.black54),
     ),
