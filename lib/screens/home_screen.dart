@@ -11,6 +11,7 @@ import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
 import '../widgets/home_entries_list.dart';
 import '../models/entry.dart';
+import '../theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
