@@ -10,8 +10,9 @@ import '../widgets/custom_fab.dart';
 import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
 import '../widgets/home_entries_list.dart';
+import '../widgets/older_expansion_chips.dart';
+import '../widgets/responsive_screen.dart';
 import '../models/entry.dart';
-import '../theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   final Map<String, bool> monthVisibility = {};
   final Map<String, GlobalKey> expansionTileKeys = {};
 
+  final Map<String, bool> yearVisibility = {};
+
   @override
   void initState() {
     super.initState();
@@ -43,20 +46,65 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final dateEntries = ref.watch(dateEntriesProvider);
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-    final previousDates = dateEntries.keys
+    final now = DateTime.now();
+    final currentMonthKey = DateFormat('yyyy-MM').format(now);
+
+    final allPreviousDates = dateEntries.keys
         .where((date) => date != todayDate)
         .toList()
       ..sort((a, b) => b.compareTo(a));
 
+    // current month only (for HomeExpansionTiles)
+    final currentMonthDates = allPreviousDates.where((date) {
+      final monthKey = DateFormat('yyyy-MM').format(DateTime.parse(date));
+      return monthKey == currentMonthKey;
+    }).toList();
+
+    // older than current month (for OlderExpansionSliver)
+    final olderDates = allPreviousDates.where((date) {
+      final monthKey = DateFormat('yyyy-MM').format(DateTime.parse(date));
+      return monthKey != currentMonthKey;
+    }).toList();
+
     final Map<String, List<String>> groupedByMonth = {};
-    for (var date in previousDates) {
+    for (final date in olderDates) {
       final dt = DateTime.parse(date);
       final monthKey = DateFormat('yyyy-MM').format(dt);
       groupedByMonth.putIfAbsent(monthKey, () => []).add(date);
     }
+    // for (var date in previousDates) {
+    //   final dt = DateTime.parse(date);
+    //   final monthKey = DateFormat('yyyy-MM').format(dt);
+    //   groupedByMonth.putIfAbsent(monthKey, () => []).add(date);
+    // }
+
+    final Map<String, Map<String, List<String>>> groupedByYear = {};
+
+    groupedByMonth.forEach((monthKey, dates) {
+      final parts = monthKey.split('-'); // yyyy-MM
+      final year = parts[0];
+      final month = parts[1];
+
+      groupedByYear.putIfAbsent(year, () => {});
+      groupedByYear[year]!.putIfAbsent(month, () => []);
+      groupedByYear[year]![month]!.addAll(dates);
+    });
+
+    // groupedByMonth.forEach((monthKey, dates) {
+    //   final parts = monthKey.split('-'); // yyyy-MM
+    //   final year = parts[0];
+    //   final month = parts[1];
+
+    //   groupedByYear.putIfAbsent(year, () => {});
+    //   groupedByYear[year]!.putIfAbsent(month, () => []);
+    //   groupedByYear[year]![month]!.addAll(dates);
+    // });
 
     final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
 
@@ -65,11 +113,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: CustomScrollView(
-            controller: scrollController,
-            slivers: [
+        child: ResponsiveScreen(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: CustomScrollView(controller: scrollController, slivers: [
               SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -124,9 +171,37 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
               HomeExpansionTiles(
-                  groupedByMonth: groupedByMonth,
+                groupedByMonth: {
+                  currentMonthKey: currentMonthDates,
+                },
+                dateEntries: dateEntries,
+                previousDates: currentMonthDates,
+                monthVisibility: monthVisibility,
+                expandedChipIndex: expandedChipIndex,
+                onChipTap: (index) {
+                  setState(() {
+                    expandedChipIndex = index;
+                  });
+                },
+                onDelete: (date) {
+                  showDeleteConfirmationDialog(context, date, ref);
+                },
+                onMonthToggle: (_) {}, // not used for current month
+                expansionTileKeys: expansionTileKeys,
+                currentMonth: currentMonthKey,
+                ref: ref,
+              ),
+              if (olderDates.isNotEmpty) ...[
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                const SliverToBoxAdapter(
+                  child: Text("Older...", style: TextStyle(fontSize: 18)),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                OlderExpansionSliver(
+                  groupedbyYear: groupedByYear,
                   dateEntries: dateEntries,
-                  previousDates: previousDates,
+                  previousDates: olderDates,
+                  yearVisibility: yearVisibility,
                   monthVisibility: monthVisibility,
                   expandedChipIndex: expandedChipIndex,
                   onChipTap: (index) {
@@ -134,8 +209,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                       expandedChipIndex = index;
                     });
                   },
-                  onDelete: (date) {
-                    showDeleteConfirmationDialog(context, date, ref);
+                  onYearToggle: (year) {
+                    setState(() {
+                      yearVisibility[year] = !(yearVisibility[year] ?? false);
+                    });
                   },
                   onMonthToggle: (monthKey) {
                     setState(() {
@@ -144,9 +221,35 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                     });
                   },
                   expansionTileKeys: expansionTileKeys,
-                  currentMonth: currentMonth,
-                  ref: ref)
-            ],
+                  ref: ref,
+                  isDark: isDark,
+                ),
+              ],
+
+              // HomeExpansionTiles(
+              //     groupedByMonth: groupedByMonth,
+              //     dateEntries: dateEntries,
+              //     previousDates: previousDates,
+              //     monthVisibility: monthVisibility,
+              //     expandedChipIndex: expandedChipIndex,
+              //     onChipTap: (index) {
+              //       setState(() {
+              //         expandedChipIndex = index;
+              //       });
+              //     },
+              //     onDelete: (date) {
+              //       showDeleteConfirmationDialog(context, date, ref);
+              //     },
+              //     onMonthToggle: (monthKey) {
+              //       setState(() {
+              //         monthVisibility[monthKey] =
+              //             !(monthVisibility[monthKey] ?? false);
+              //       });
+              //     },
+              //     expansionTileKeys: expansionTileKeys,
+              //     currentMonth: currentMonth,
+              //     ref: ref)
+            ]),
           ),
         ),
       ),

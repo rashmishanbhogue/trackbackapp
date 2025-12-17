@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../widgets/badges_svg.dart';
+// import '../widgets/badges_svg.dart';
+import '../widgets/completed_entries_section.dart';
 import '../utils/constants.dart';
 import '../utils/home_dialog_utils.dart';
 import '../models/entry.dart';
@@ -110,154 +111,169 @@ class HomeExpansionTiles extends StatelessWidget {
                   expansionTileKeys.putIfAbsent(date, () => GlobalKey());
               // figure out expanded state
               final index = previousDates.indexOf(date);
-              final count = dateEntries[date]?.length ?? 0;
+              // final count = dateEntries[date]?.length ?? 0;
               final isExpanded = expandedChipIndex == index;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Dismissible(
-                  key: Key(date),
-                  direction: DismissDirection.endToStart,
-                  background: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.iconDeleteContent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child:
-                          const Icon(Icons.delete, color: AppTheme.baseWhite),
-                    ),
-                  ),
-                  confirmDismiss: (direction) async {
-                    return await showDeleteConfirmationDialog(
-                        context, date, ref);
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      // outer container for focused tile border effect
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                          color: AppTheme.getHomeTileColor(index, context),
-                          borderRadius: BorderRadius.circular(20),
-                          border: isExpanded
-                              ? Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 1,
-                                )
-                              : null),
-                      child: Column(
-                        key: tileKey,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // header - date + badge
-                          ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 16),
-                            title: Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Text(
-                                  formattedDate,
-                                  style: TextStyle(
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.light
-                                        ? AppTheme.textPrimaryLight
-                                        : AppTheme.textPrimaryDark,
-                                  ),
-                                ),
-                                const Expanded(child: SizedBox(width: 0)),
-                                buildBadge(count),
-                              ],
-                            ),
-                            onTap: () {
-                              onChipTap(isExpanded ? null : index);
-                              if (!isExpanded) {
-                                // scroll to it if needed (only when expanding)
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  // get the build context of the expanded tiel via its key
-                                  final ctx = tileKey.currentContext;
-                                  if (ctx != null) {
-                                    // wait till next frame so layout is complete
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                      final ctx = tileKey.currentContext;
-                                      if (ctx != null) {
-                                        // get the tiles position on screen
-                                        final renderBox =
-                                            ctx.findRenderObject() as RenderBox;
-                                        final position = renderBox
-                                            .localToGlobal(Offset.zero)
-                                            .dy;
-                                        final screenHeight =
-                                            MediaQuery.of(ctx).size.height;
-                                        // check if tile is pushed too far down
-                                        final isTooLow =
-                                            position > screenHeight * 0.6;
+              // return Padding(
+              //   padding: const EdgeInsets.symmetric(vertical: 4),
+              //   child: Dismissible(
+              //     key: Key(date),
+              //     direction: DismissDirection.endToStart,
+              //     background: ClipRRect(
+              //       borderRadius: BorderRadius.circular(20),
+              //       child: Container(
+              //         decoration: BoxDecoration(
+              //           color: AppTheme.iconDeleteContent,
+              //           borderRadius: BorderRadius.circular(20),
+              //         ),
+              //         alignment: Alignment.centerRight,
+              //         padding: const EdgeInsets.symmetric(horizontal: 20),
+              //         child:
+              //             const Icon(Icons.delete, color: AppTheme.baseWhite),
+              //       ),
+              //     ),
+              //     confirmDismiss: (direction) async {
+              //       return await showDeleteConfirmationDialog(
+              //           context, date, ref);
+              //     },
+              //     child: ClipRRect(
+              //       borderRadius: BorderRadius.circular(20),
+              //       child: Container(
+              //         // outer container for focused tile border effect
+              //         margin: const EdgeInsets.symmetric(vertical: 4),
+              //         decoration: BoxDecoration(
+              //             color: AppTheme.getHomeTileColor(index, context),
+              //             borderRadius: BorderRadius.circular(20),
+              //             border: isExpanded
+              //                 ? Border.all(
+              //                     color: Theme.of(context).colorScheme.primary,
+              //                     width: 1,
+              //                   )
+              //                 : null),
+              //         child: Column(
+              //           key: tileKey,
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             // header - date + badge
+              //             ListTile(
+              //               contentPadding: const EdgeInsets.symmetric(
+              //                   vertical: 16, horizontal: 16),
+              //               title: Row(
+              //                 mainAxisAlignment: MainAxisAlignment.start,
+              //                 children: [
+              //                   Text(
+              //                     formattedDate,
+              //                     style: TextStyle(
+              //                       color: Theme.of(context).brightness ==
+              //                               Brightness.light
+              //                           ? AppTheme.textPrimaryLight
+              //                           : AppTheme.textPrimaryDark,
+              //                     ),
+              //                   ),
+              //                   const Expanded(child: SizedBox(width: 0)),
+              //                   buildBadge(count),
+              //                 ],
+              //               ),
+              //               onTap: () {
+              //                 onChipTap(isExpanded ? null : index);
+              //                 if (!isExpanded) {
+              //                   // scroll to it if needed (only when expanding)
+              //                   WidgetsBinding.instance
+              //                       .addPostFrameCallback((_) {
+              //                     // get the build context of the expanded tiel via its key
+              //                     final ctx = tileKey.currentContext;
+              //                     if (ctx != null) {
+              //                       // wait till next frame so layout is complete
+              //                       WidgetsBinding.instance
+              //                           .addPostFrameCallback((_) {
+              //                         final ctx = tileKey.currentContext;
+              //                         if (ctx != null) {
+              //                           // get the tiles position on screen
+              //                           final renderBox =
+              //                               ctx.findRenderObject() as RenderBox;
+              //                           final position = renderBox
+              //                               .localToGlobal(Offset.zero)
+              //                               .dy;
+              //                           final screenHeight =
+              //                               MediaQuery.of(ctx).size.height;
+              //                           // check if tile is pushed too far down
+              //                           final isTooLow =
+              //                               position > screenHeight * 0.6;
 
-                                        // scroll to make tile visible (middle ish of the screen)
-                                        Scrollable.ensureVisible(
-                                          ctx,
-                                          duration:
-                                              const Duration(milliseconds: 400),
-                                          alignment: isTooLow ? 0.05 : 0.1,
-                                          curve: Curves.easeInOut,
-                                        );
-                                      }
-                                    });
-                                  }
-                                });
-                              }
-                            },
-                          ),
-                          // list of entries for that day
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            // animate open/close when tile expands or collapses
-                            child: isExpanded
-                                ? Column(
-                                    children:
-                                        (dateEntries[date] ?? []).map((entry) {
-                                      return GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () {
-                                          // collapse tile when user taps inside
-                                          onChipTap(null);
-                                        },
-                                        child: ListTile(
-                                          title: Text(
-                                            entry.text,
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                          .brightness ==
-                                                      Brightness.light
-                                                  ? Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge
-                                                      ?.color
-                                                  : Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.color,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  )
-                                : const SizedBox
-                                    .shrink(), // hidden when collapsed
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+              //                           // scroll to make tile visible (middle ish of the screen)
+              //                           Scrollable.ensureVisible(
+              //                             ctx,
+              //                             duration:
+              //                                 const Duration(milliseconds: 400),
+              //                             alignment: isTooLow ? 0.05 : 0.1,
+              //                             curve: Curves.easeInOut,
+              //                           );
+              //                         }
+              //                       });
+              //                     }
+              //                   });
+              //                 }
+              //               },
+              //             ),
+              //             // list of entries for that day
+              //             AnimatedSize(
+              //               duration: const Duration(milliseconds: 300),
+              //               curve: Curves.easeInOut,
+              //               // animate open/close when tile expands or collapses
+              //               child: isExpanded
+              //                   ? Column(
+              //                       children:
+              //                           (dateEntries[date] ?? []).map((entry) {
+              //                         return GestureDetector(
+              //                           behavior: HitTestBehavior.opaque,
+              //                           onTap: () {
+              //                             // collapse tile when user taps inside
+              //                             onChipTap(null);
+              //                           },
+              //                           child: ListTile(
+              //                             title: Text(
+              //                               entry.text,
+              //                               style: TextStyle(
+              //                                 color: Theme.of(context)
+              //                                             .brightness ==
+              //                                         Brightness.light
+              //                                     ? Theme.of(context)
+              //                                         .textTheme
+              //                                         .bodyLarge
+              //                                         ?.color
+              //                                     : Theme.of(context)
+              //                                         .textTheme
+              //                                         .bodyMedium
+              //                                         ?.color,
+              //                               ),
+              //                             ),
+              //                           ),
+              //                         );
+              //                       }).toList(),
+              //                     )
+              //                   : const SizedBox
+              //                       .shrink(), // hidden when collapsed
+              //             )
+              //           ],
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // );
+              return CompletedEntriesSection(
+                date: date,
+                entries: dateEntries[date] ?? [],
+                isExpanded: isExpanded,
+                onToggle: () => onChipTap(isExpanded ? null : index),
+                tileKey: tileKey,
+                colorIndex: index,
+                confirmDismiss: (direction) async {
+                  return await showDeleteConfirmationDialog(
+                    context,
+                    date,
+                    ref,
+                  );
+                },
               );
             }));
           }

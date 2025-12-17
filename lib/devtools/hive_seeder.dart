@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:hive/hive.dart';
 import 'package:faker/faker.dart';
-import 'package:flutter/material.dart';
 import '../models/entry.dart';
 
 Future<void> runHiveSeeder() async {
@@ -15,7 +14,7 @@ Future<void> runHiveSeeder() async {
   // if entries already exist, try to read and decode them
   if (box.containsKey('entries')) {
     final raw = box.get('entries') as Map;
-    final entries = raw.map<String, List<Entry>>((key, value) {
+    raw.map<String, List<Entry>>((key, value) {
       return MapEntry(
         key.toString(),
         (value as List).map<Entry>((e) {
@@ -122,7 +121,7 @@ Future<void> runHiveSeeder() async {
   // attempt to decode stored data to confirm it is valid
   final confirmMap = rawConfirm as Map;
 
-  final confirm = confirmMap.map<String, List<Entry>>((key, value) {
+  confirmMap.map<String, List<Entry>>((key, value) {
     return MapEntry(
       key.toString(),
       (value as List).map<Entry>((e) {

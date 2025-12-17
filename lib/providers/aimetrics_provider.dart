@@ -3,7 +3,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/entry.dart';
 import '../services/groq_service.dart';
-import '../utils/time_utils.dart';
 
 // handle the ai metrics logic and notifies listeners when data changes
 class AiMetricsProvider extends ChangeNotifier {

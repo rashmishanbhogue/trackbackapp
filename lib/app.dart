@@ -13,7 +13,7 @@ class TrackBackApp extends ConsumerWidget {
     final theme = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Trackback',
+      title: 'trackback',
       theme: theme,
       home: CustomNavBar(),
     );

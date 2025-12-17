@@ -3,41 +3,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
+import '../screens/profile_screen.dart';
 import '../screens/settings_screen.dart';
 
 class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const CustomAppBar({super.key});
+  final bool isProfile;
+
+  const CustomAppBar({
+    super.key,
+    this.isProfile = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AppBar(
-        title: const Text('TrackBack'),
-        leading: Padding(
+      title: const Text(
+        'trackback',
+        style: TextStyle(
+            fontFamily: 'Inter', fontWeight: FontWeight.w400, fontSize: 22),
+      ),
+      centerTitle: false,
+      actions: [
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: IconButton(
-            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            icon: Icon(
+              isProfile ? Icons.account_circle : Icons.account_circle_outlined,
+            ),
             onPressed: () {
-              ref.read(themeProvider.notifier).toggleTheme();
+              if (!isProfile) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ProfileScreen(),
+                  ),
+                );
+              }
             },
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ));
-              },
-            ),
-          )
-        ]);
+      ],
+    );
   }
 
   @override

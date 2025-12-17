@@ -1,20 +1,24 @@
-// ai_metrics_screen.dart, optional and uses internet
+// ai_metrics_screen.dart, optional screen that uses ai and internet to show productivity metrics based on entries
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:trackbackapp/widgets/expandable_chips.dart';
-import 'settings_screen.dart';
-import '../utils/week_selection_utils.dart';
-import '../providers/theme_provider.dart';
 import '../providers/date_entries_provider.dart';
 import '../services/groq_service.dart';
 import '../models/entry.dart';
+import '../utils/week_selection_utils.dart';
 import '../utils/hive_utils.dart';
 import '../utils/constants.dart';
-import '../utils/calendar_utils.dart';
+import '../utils/date_week_utils.dart';
+import '../utils/aimetrics_category_utils.dart';
+import '../utils/aimetrics_filter_utils.dart';
 import '../utils/month_year_utils.dart';
+import '../widgets/custom_appbar.dart';
+import '../widgets/custom_fab.dart';
+import '../widgets/expandable_chips.dart';
+import '../widgets/responsive_screen.dart';
 import '../theme.dart';
 
 enum TimeFilter { all, day, week, month, year }
@@ -27,6 +31,14 @@ class AiMetricsScreen extends ConsumerStatefulWidget {
 }
 
 class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
+  EntryRangeInfo entryRange = EntryRangeInfo(
+    firstDate: DateTime.now(),
+    lastDate: DateTime.now(),
+    availableDays: {},
+    availableWeeks: {},
+    availableMonths: {},
+    availableYears: {},
+  );
   bool isRefreshing = false;
   Map<String, int> labelCounts = {};
   Map<String, List<Entry>> labelToEntries = {};
@@ -34,19 +46,40 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   String? expandedCategory;
   OverlayEntry? filterOverlayEntry;
 
+  List<Entry> allEntries = [];
+
+  // to handle disabled to select date/ week/ month/ year with a dynamic hint message
+  DateTime? tappedDisabledEntry;
+  Offset? tappedOffset;
+
   final Map<String, GlobalKey> categoryKeys = {
     for (var c in standardCategories) c: GlobalKey()
   };
 
   DateTime selectedDay = DateTime.now();
-  DateTime focusedDay = DateTime.now();
 
+  DateTime clampFocusedDay(DateTime focus, DateTime first, DateTime last) {
+    if (focus.isBefore(first)) return first;
+    if (focus.isAfter(last)) return last;
+    return focus;
+  }
+
+  DateTime clampFocusedWeek(DateTime? focus, DateTime first, DateTime last) {
+    if (focus == null) return DateTime.now();
+
+    if (focus.isBefore(first)) return first;
+    if (focus.isAfter(last)) return last;
+
+    return focus;
+  }
+
+  DateTime? focusedDay;
   DateTime? focusedWeek;
   DateTime? selectedWeek;
   DateTime rangeStartDay = DateTime.now();
   DateTime rangeEndDay = DateTime.now();
 
-  DateTime focusedMonth = DateTime.now();
+  DateTime? focusedMonth;
   DateTime selectedMonth = DateTime.now();
   Set<DateTime> availableMonthData = {};
 
@@ -69,47 +102,120 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     final now = DateTime.now();
     final normalizedNow = DateTime(now.year, now.month, now.day);
 
-    focusedDay = now;
-    selectedDay = now;
+    // wait until entryRange is set before clamping
+    if (entryRange.firstDate.isBefore(entryRange.lastDate)) {
+      focusedDay = clampFocusedDay(
+          normalizedNow, entryRange.firstDate, entryRange.lastDate);
+      selectedDay = focusedDay!;
+    } else {
+      // fallback for first run before data load
+      focusedDay = normalizedNow;
+      selectedDay = normalizedNow;
+    }
+    debugPrint("before rangeStartDay: $rangeStartDay");
+    debugPrint("before rangeEndDay: $rangeEndDay");
 
     rangeStartDay = normalizedNow;
     rangeEndDay = normalizedNow.add(const Duration(days: 6));
 
+    debugPrint("after rangeStartDay: $rangeStartDay");
+    debugPrint("after rangeEndDay: $rangeEndDay");
+
     selectedWeek = updateWeekRange(normalizedNow);
     focusedWeek = normalizedNow;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final box = ref.read(hiveBoxProvider);
+      final stored = box.get('entries');
+
+      final List<Entry> all = stored != null && stored is Map
+          ? stored.values.expand((rawList) {
+              if (rawList is! List) return <Entry>[];
+              return rawList.map<Entry?>((item) {
+                try {
+                  final json = jsonDecode(item);
+                  return Entry.fromJson(json);
+                } catch (_) {
+                  return null;
+                }
+              }).whereType<Entry>();
+            }).toList()
+          : [];
+
+      final newRange = calculateEntryRangeInfo(all);
+
+      if (mounted) {
+        setState(() {
+          allEntries = all;
+          labelToEntries = groupEntriesByLabel(all);
+          entryRange = newRange;
+
+          // week
+          focusedWeek = clampFocusedWeek(
+              focusedWeek, newRange.firstDate, newRange.lastDate);
+
+          // update week range using new entry data
+          rangeStartDay = getStartOfWeek(focusedWeek!);
+          rangeEndDay = getEndOfWeek(focusedWeek!);
+
+          // month
+          focusedMonth = newRange.lastDate;
+          selectedMonth = newRange.lastDate;
+          availableMonthData = newRange.availableMonths;
+
+          // year
+          final lastYear = newRange.lastDate.year;
+          focusedYear = DateTime(lastYear);
+          selectedYear = DateTime(lastYear);
+          availableYearData = newRange.availableMonths;
+        });
+      }
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    loadStoredMetrics(); // reload data when navigating back to the page
+    if (!isRefreshing) {
+      loadStoredMetrics();
+    }
+    // loadStoredMetrics(); // reload data when navigating back to the page
   }
 
   Future<void> loadStoredMetrics() async {
-    final storedLabels = await getLabelsFromHive();
+    // final storedLabels = await getLabelsFromHive();
     final timestamp = await getLastUpdatedFromHive();
     final dateEntriesMap = ref.read(dateEntriesProvider);
     final allEntries = dateEntriesMap.values.expand((list) => list).toList();
 
     // map to group entries by category
-    Map<String, List<Entry>> entriesByCategory = {};
+    // Map<String, List<Entry>> entriesByCategory = {};
+    final Map<String, List<Entry>> entriesByCategory = {
+      for (final c in standardCategories) c: [],
+    };
 
     // populate entriesByCategory map with entries from allEntries
     for (final entry in allEntries) {
-      String label = entry.label;
+      // String label = entry.label;
+      if (entry.label.isEmpty) continue;
 
-      if (label.isNotEmpty) {
-        final category = getBroaderCategory(label);
-
-        // only add entries that have a matching category in storedLabels
-        if (storedLabels.containsKey(category)) {
-          entriesByCategory.putIfAbsent(category, () => []).add(entry);
-        }
+      final category = getBroaderCategory(entry.label);
+      if (entriesByCategory.containsKey(category)) {
+        entriesByCategory[category]!.add(entry);
       }
+
+      // if (label.isNotEmpty) {
+      //   final category = getBroaderCategory(label);
+
+      //   // only add entries that have a matching category in storedLabels
+      //   if (storedLabels.containsKey(category)) {
+      //     entriesByCategory.putIfAbsent(category, () => []).add(entry);
+      //   }
+      // }
     }
 
     setState(() {
-      labelCounts = {...storedLabels}; // copy the stored counts
+      // labelCounts = {...storedLabels}; // copy the stored counts
       labelToEntries = entriesByCategory; // set the entries map
       lastUpdated = timestamp; // set the last updated timestamp
     });
@@ -124,7 +230,12 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     final allEntries = dateEntriesMap.values.expand((list) => list).toList();
 
     Map<String, int> newLabelCounts = {};
-    Map<String, List<Entry>> newLabelToEntries = {};
+
+    // Map<String, List<Entry>> newLabelToEntries = {};
+    final Map<String, List<Entry>> newLabelToEntries = {
+      for (final category in standardCategories) category: [],
+    };
+
     Map<String, List<Entry>> updatedEntriesByDate = {};
 
     for (final entry in allEntries) {
@@ -133,17 +244,37 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
         label = await GroqService.classifySingleText(entry.text);
       }
 
-      final validLabel = label.isNotEmpty ? label : 'Uncategorized';
-      final category = getBroaderCategory(validLabel);
+      // final validLabel = label.isNotEmpty ? label : 'Uncategorized';
+      // final category = getBroaderCategory(validLabel);
 
-      final updatedEntry = entry.copyWith(label: validLabel);
+      final validLabel = label.isNotEmpty ? label : 'Idle';
+
+      String category = getBroaderCategory(validLabel);
+
+      // safety net — force into known buckets
+      if (!standardCategories.contains(category)) {
+        category = 'Idle';
+      }
+
+      final updatedEntry = Entry(
+        text: entry.text,
+        label: validLabel,
+        timestamp: entry.timestamp,
+      );
+
+      // final updatedEntry = entry.copyWith(label: validLabel);
 
       newLabelCounts[category] = (newLabelCounts[category] ?? 0) + 1;
       newLabelToEntries.putIfAbsent(category, () => []).add(updatedEntry);
 
-      final dateKey = DateFormat('yyyy-MM-dd').format(updatedEntry.timestamp);
+      // final dateKey = DateFormat('yyyy-MM-dd').format(updatedEntry.timestamp);
+      final dateKey = DateFormat('yyyy-MM-dd').format(entry.timestamp);
+
       updatedEntriesByDate.putIfAbsent(dateKey, () => []).add(updatedEntry);
     }
+
+    debugPrint(
+        'LABEL DUMP → ${updatedEntriesByDate.values.expand((e) => e).map((e) => e.label).toSet()}');
 
     await storeLabelsInHive(newLabelCounts);
     final now = DateTime.now();
@@ -151,6 +282,10 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
     // update the provider and persist updated entries with their new labels
     ref.read(dateEntriesProvider.notifier).replaceAll(updatedEntriesByDate);
+
+    final verify = ref.read(dateEntriesProvider);
+    debugPrint('AFTER REPLACE → total entries: '
+        '${verify.values.expand((e) => e).length}');
 
     setState(() {
       labelCounts = newLabelCounts;
@@ -160,51 +295,14 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     });
   }
 
-  String getBroaderCategory(String label) {
-    if (standardCategories.contains(label)) {
-      label;
-    }
-    return 'Uncategorized';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('TrackBack'),
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode,
-            ),
-            onPressed: () {
-              ref.read(themeProvider.notifier).toggleTheme();
-            },
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: theme.colorScheme.primary,
+      appBar: const CustomAppBar(),
+      floatingActionButton: CustomFAB(
         child: isRefreshing
             ? SizedBox(
                 width: 20,
@@ -227,44 +325,46 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
           }
         },
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 12),
-              const Text(
-                'AI Categorised Labels:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              buildFilterChips(theme, isDark),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  lastUpdated != null
-                      ? 'Last updated: ${DateFormat('dd-MMM-yy, HH:mm').format(lastUpdated!)} hrs'
-                      : 'Last updated: Never. Add entries in Home and press Refresh button here.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontStyle: FontStyle.italic,
-                  ),
-                  textAlign: TextAlign.center,
+      body: ResponsiveScreen(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                const Text(
+                  'AI Categorised Labels:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 8),
-              AiMetricsExpansionTiles(
-                labelToEntries: labelToEntries,
-                expandedCategory: expandedCategory,
-                isRefreshing: isRefreshing,
-                onTap: (category) {
-                  setState(() {
-                    expandedCategory = category;
-                  });
-                },
-                isDark: isDark,
-                categoryKeys: categoryKeys,
-              )
-            ],
+                buildFilterChips(theme, isDark),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    lastUpdated != null
+                        ? 'Last updated: ${DateFormat('dd-MMM-yy, HH:mm').format(lastUpdated!)} hrs'
+                        : 'Last updated: Never. Add entries in Home and press Refresh button here.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                AiMetricsExpansionTiles(
+                  labelToEntries: labelToEntries,
+                  expandedCategory: expandedCategory,
+                  isRefreshing: isRefreshing,
+                  onTap: (category) {
+                    setState(() {
+                      expandedCategory = category;
+                    });
+                  },
+                  isDark: isDark,
+                  categoryKeys: categoryKeys,
+                )
+              ],
+            ),
           ),
         ),
       ),
@@ -302,9 +402,28 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                   // made async to ensure chip scrolls into view before calculating its position for overlay alignment
                   onSelected: (selected) async {
                     // if the same chip is tapped on again, reopen the overlay manually
+                    // commented for now to move the actual selection logic inside the ok button
                     final isAlreadySelected = selectedFilter == filter;
 
+                    if (filter == TimeFilter.all) {
+                      final updatedLabelToEntries = getFilteredLabelEntries(
+                        entries: allEntries,
+                        filter: filter,
+                        selectedDay: selectedDay,
+                        selectedWeek: selectedWeek,
+                        selectedMonth: selectedMonth,
+                        selectedYear: selectedYear,
+                      );
+                      setState(() {
+                        selectedFilter = filter;
+                        labelToEntries = updatedLabelToEntries;
+                      });
+                      removeFilterOverlay();
+                      return;
+                    }
+
                     // update selected filter state only if it is a new selection
+                    // this is required to 'select' the new chip while awaiting the actual overlay selection + ok for dynamic data display
                     if (!isAlreadySelected) {
                       setState(() {
                         selectedFilter = filter;
@@ -334,6 +453,18 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                     // current position for this piece of code, since All gives issues otherwise
                     // scroll must already happen before this check, else All does not move back into position
                     if (filter == TimeFilter.all) {
+                      final updatedLabelToEntries = getFilteredLabelEntries(
+                        entries: allEntries,
+                        filter: filter,
+                        selectedDay: selectedDay,
+                        selectedWeek: selectedWeek,
+                        selectedMonth: selectedMonth,
+                        selectedYear: selectedYear,
+                      );
+                      setState(() {
+                        selectedFilter = filter;
+                        labelToEntries = updatedLabelToEntries;
+                      });
                       removeFilterOverlay();
                       return; // skip overlay only for the 'all' pill filter
                     }
@@ -348,9 +479,18 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                     // required for the position overlay
                     // which, for the last chip, is aligned right unlike the center alignment for the rest
                     final isLastChip = index == TimeFilter.values.length - 1;
-                    final entries = labelToEntries[filter.name] ?? [];
-                    showFilterOverlay(offset, size, filter, isLastChip,
-                        entries: entries);
+
+                    final entries =
+                        labelToEntries.values.expand((list) => list).toList();
+
+                    showFilterOverlay(
+                      offset,
+                      size,
+                      filter,
+                      isLastChip,
+                      entries: entries,
+                      entryRange: entryRange,
+                    );
                   },
                   backgroundColor: Colors.transparent,
                   selectedColor: AppTheme.weekHighlightDark,
@@ -385,38 +525,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     }
   }
 
-  List<DateTime> getAvailableDates(List<Entry> entries) {
-    return entries
-        .map((entry) => DateTime(
-            entry.timestamp.year, entry.timestamp.month, entry.timestamp.day))
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.compareTo(b));
-  }
-
-  List<int> getAvailableMonths(List<Entry> entries) {
-    return entries.map((entry) => entry.timestamp.month).toSet().toList();
-  }
-
-  List<int> getAvailableYears(List<Entry> entries) {
-    return entries.map((entry) => entry.timestamp.year).toSet().toList();
-  }
-
-  List<String> getAvailableWeeks(List<Entry> entries) {
-    return entries
-        .map((entry) {
-          final startOfWeek = entry.timestamp
-              .subtract(Duration(days: entry.timestamp.weekday - 1));
-          return "${startOfWeek.year}-${startOfWeek.month}-${startOfWeek.day}";
-        })
-        .toSet()
-        .toList();
-  }
-
   // show an overlay positioned below the selected chip, aligned based on chips screen position
   void showFilterOverlay(
       Offset offset, Size chipSize, TimeFilter filter, bool alignRight,
-      {List<Entry> entries = const []}) {
+      {required EntryRangeInfo entryRange, List<Entry> entries = const []}) {
+    debugPrint(' showFilterOverlay called with:');
+    debugPrint('Filter: ${filter.name}');
+    debugPrint('entryRange.availableMonths: ${entryRange.availableMonths}');
+    debugPrint('entryRange.availableYears: ${entryRange.availableYears}');
+
     removeFilterOverlay(); // remove previous overlay if any
 
     final overlay = Overlay.of(context);
@@ -425,7 +542,22 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
     // const double overlayHeight = 300;
     double leftPosition;
 
+    // final entryInfo = calculateEntryRangeInfo(allEntries);
+    final entryInfo = entryRange;
+
     bool hasInitializedWeek = false;
+
+    final firstDate = allEntries.isNotEmpty
+        ? allEntries
+            .map((e) => e.timestamp)
+            .reduce((a, b) => a.isBefore(b) ? a : b)
+        : DateTime.now().subtract(const Duration(days: 365));
+
+    final lastDate = allEntries.isNotEmpty
+        ? allEntries
+            .map((e) => e.timestamp)
+            .reduce((a, b) => a.isAfter(b) ? a : b)
+        : DateTime.now();
 
     // if the chip is the last one (far right), align overlay to its right edge
     // otherwise center overlay under the respective chip
@@ -494,7 +626,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                         if (filter == TimeFilter.week && !hasInitializedWeek) {
                           hasInitializedWeek = true;
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            updateWeekRange(focusedDay);
+                            updateWeekRange(focusedDay ?? DateTime.now());
                             setState(() {});
                             setStateOverlay(() {});
                           });
@@ -529,14 +661,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                 if (filter == TimeFilter.day)
                                   buildDayCalendar(
                                     filter: filter,
-                                    focusedDay: focusedDay,
+                                    focusedDay: focusedDay ?? DateTime.now(),
                                     selectedDay: selectedDay,
                                     onDaySelected: (selected, focused) {
                                       setState(() {
                                         selectedDay = selected;
                                         focusedDay = focused;
                                       });
-                                      setStateOverlay(() {});
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
                                     },
                                     isDark: isDark,
                                     currentVisibleMonth: currentVisibleMonth,
@@ -546,36 +679,61 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                       });
                                     },
                                     setState: (fn) => setState(fn),
+                                    firstMonth: DateTime(
+                                        firstDate.year, firstDate.month),
+                                    lastMonth:
+                                        DateTime(lastDate.year, lastDate.month),
+                                    entryInfo: entryInfo,
+                                    onDisabledDayTap: onDisabledTap,
                                   ),
 
                                 if (filter == TimeFilter.week)
                                   buildWeekCalendar(
+                                    allEntries: allEntries,
                                     currentVisibleMonth: currentVisibleMonth,
                                     onVisibleMonthChanged: (newMonth) {
                                       setState(() {
                                         currentVisibleMonth = newMonth;
                                       });
                                     },
-                                    focusedWeek: focusedWeek ?? DateTime.now(),
+                                    focusedWeek: clampFocusedWeek(
+                                      focusedWeek ?? DateTime.now(),
+                                      entryRange.firstDate,
+                                      entryRange.lastDate,
+                                    ),
+
                                     selectedWeek: selectedWeek,
                                     onWeekSelected: (selected, focused) {
                                       setState(() {
-                                        selectedWeek = selected;
-                                        focusedWeek = focused;
+                                        final normalized = DateTime(
+                                            selected.year,
+                                            selected.month,
+                                            selected.day);
+                                        selectedWeek = normalized;
+                                        focusedWeek = normalized;
+                                        updateWeekRange(normalized);
                                       });
-                                      setStateOverlay(() {});
+                                      setStateOverlay(
+                                          () {}); // rebuild the overlay
                                     },
                                     isDark: isDark,
                                     calendarStyle: calendarStyle,
-                                    setStateOverlay: () =>
-                                        setStateOverlay(() {}),
+                                    setStateOverlay: () => setStateOverlay(
+                                        () {}), // rebuild the overlay
                                     setState: (fn) => setState(fn),
+                                    firstMonth: DateTime(
+                                        firstDate.year, firstDate.month),
+                                    lastMonth:
+                                        DateTime(lastDate.year, lastDate.month),
+                                    entryInfo: entryInfo,
+                                    onDisabledWeekTap: onDisabledTap,
                                   ),
 
                                 if (filter == TimeFilter.month)
                                   buildMonthView(
                                     filter: filter,
-                                    focusedMonth: focusedMonth,
+                                    focusedMonth:
+                                        focusedMonth ?? DateTime.now(),
                                     selectedMonth: selectedMonth,
                                     onSelectedMonth: (selected, focused) {
                                       setState(() {
@@ -586,10 +744,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                       setStateOverlay(
                                           () {}); // rebuild the overlay
                                     },
-                                    // filtering logic
-
                                     isDark: isDark,
-                                    availableData: availableMonthData,
+                                    entryRange: entryRange,
                                   ),
 
                                 if (filter == TimeFilter.year)
@@ -613,17 +769,59 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
                                       setStateOverlay(
                                           () {}); // rebuild the overlay
                                     },
-                                    // filtering logic
-
                                     isDark: isDark,
                                     availableData: availableYearData,
+                                    entryRange: entryRange,
                                   ),
 
                                 const SizedBox(height: 6),
                                 ElevatedButton(
                                   onPressed: () {
-                                    // accept and close the overlay, filtering the data below based on the selection
                                     removeFilterOverlay();
+                                    // accept and close the overlay, filtering the data below based on the selection
+                                    debugPrint("selectedMonth: $selectedMonth");
+                                    debugPrint("selectedYear: $selectedYear");
+
+                                    final referenceDate =
+                                        getReferenceDateForFilter(
+                                      filter: filter,
+                                      selectedDay: selectedDay,
+                                      selectedWeek: selectedWeek,
+                                      selectedMonth: selectedMonth,
+                                      selectedYear: selectedYear,
+                                    );
+
+                                    debugPrint("=== Before Filtering ===");
+                                    debugPrint("Filter: $filter");
+                                    debugPrint(
+                                        "Reference Date: $referenceDate");
+
+                                    final updatedLabelToEntries =
+                                        getFilteredLabelEntries(
+                                      entries: allEntries,
+                                      filter: filter,
+                                      selectedDay: selectedDay,
+                                      selectedWeek: selectedWeek,
+                                      selectedMonth: selectedMonth,
+                                      selectedYear: selectedYear,
+                                    );
+                                    debugPrint("FILTER: $filter");
+                                    debugPrint("SELECTED DAY: $selectedDay");
+                                    debugPrint("SELECTED WEEK: $selectedWeek");
+                                    debugPrint(
+                                        "SELECTED MONTH: $selectedMonth");
+                                    debugPrint("SELECTED YEAR: $selectedYear");
+
+                                    debugPrint("Grouped Entries:");
+                                    updatedLabelToEntries
+                                        .forEach((label, list) {
+                                      debugPrint("$label → ${list.length}");
+                                    });
+
+                                    setState(() {
+                                      selectedFilter = filter;
+                                      labelToEntries = updatedLabelToEntries;
+                                    });
                                   },
                                   child: const Text("OK"),
                                 ),
@@ -647,5 +845,28 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
   void removeFilterOverlay() {
     filterOverlayEntry?.remove();
     filterOverlayEntry = null;
+  }
+
+  void onDisabledTap(DateTime disabledEntry, Offset offset) {
+    setState(() {
+      tappedDisabledEntry = disabledEntry;
+      tappedOffset = offset;
+    });
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          tappedDisabledEntry = null;
+        });
+      }
+    });
+  }
+
+  DateTime getStartOfWeek(DateTime date) {
+    return date.subtract(Duration(days: date.weekday - 1));
+  }
+
+  DateTime getEndOfWeek(DateTime date) {
+    return date.add(Duration(days: DateTime.daysPerWeek - date.weekday));
   }
 }

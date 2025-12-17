@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/entry.dart';
 import '../theme.dart';
-import '../metrics/dashboard_metrics_utils.dart';
 
 Widget buildBarChart(
   BuildContext context,
