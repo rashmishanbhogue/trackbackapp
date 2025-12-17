@@ -534,6 +534,59 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                IconButton(
+                                  onPressed: canMoveForward()
+                                      ? () => moveReferenceDate(1)
+                                      : null,
+                                  icon: const Icon(Icons.chevron_right),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // bar graph or pie chart inside TabBarView
+                            Expanded(
+                              child: TabBarView(
+                                controller: tabController,
+                                physics: const NeverScrollableScrollPhysics(),
+                                children: ['Day', 'Week', 'Month', 'Year']
+                                    .map((tabType) {
+                                  // filter entries for this tab
+                                  final allEntries = dateEntries.values
+                                      .expand((list) => list)
+                                      .toList();
+                                  final filteredEntries =
+                                      filterEntriesByViewType(
+                                    allEntries,
+                                    tabType,
+                                    selectedDate: referenceDate,
+                                  );
+
+                                  // badge counts for this tab
+                                  final badgeCountMap = calculateBadgeCount(
+                                    filteredEntries,
+                                    tabType,
+                                    selectedDate: referenceDate,
+                                  );
+
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
+                                    child: SizedBox.expand(
+                                      child: isBarChart
+                                          ? buildBarChart(
+                                              context,
+                                              filteredEntries,
+                                              tabType,
+                                              referenceDate)
+                                          : buildPieChart(
+                                              context,
+                                              badgeCountMap,
+                                              tabType,
+                                              referenceDate),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                               const SizedBox(height: 8),
                               Align(
@@ -558,9 +611,32 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                   }).toList(),
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  'Morning',
+                                  'Afternoon',
+                                  'Evening',
+                                  'Night'
+                                ].map((period) {
+                                  final count = metricsTimes[period] ?? 0;
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: Text(
+                                      '$period : $count',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
                     ],
