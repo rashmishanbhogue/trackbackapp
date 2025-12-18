@@ -11,7 +11,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TrackBack'),
+        title: const Text('trackback'),
         leading: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: IconButton(

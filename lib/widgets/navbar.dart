@@ -1,8 +1,9 @@
 // navbar.dart, app's custom navbar with 3 navigations
 
 import 'package:flutter/material.dart';
-import '../screens/home_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/ideas_screen.dart';
+import '../screens/home_screen.dart';
 import '../screens/aimetrics_screen.dart';
 import '../screens/settings_screen.dart';
 
@@ -14,7 +15,7 @@ class CustomNavBar extends StatefulWidget {
 }
 
 class CustomNavBarState extends State<CustomNavBar> {
-  int currentIndex = 1;
+  int currentIndex = 2;
 
   void onItemTapped(int index) {
     setState(() {
@@ -40,6 +41,11 @@ class CustomNavBarState extends State<CustomNavBar> {
             label: 'Dashboard',
           ),
           NavigationDestination(
+            icon: Icon(Icons.lightbulb_outline),
+            selectedIcon: Icon(Icons.lightbulb),
+            label: 'Ideas',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
@@ -59,11 +65,13 @@ class CustomNavBarState extends State<CustomNavBar> {
       case 0:
         return const DashboardScreen(key: ValueKey('Dashboard'));
       case 1:
-        return const HomeScreen(key: ValueKey('Home'));
+        return const IdeasScreen(key: ValueKey('Ideas'));
       case 2:
-        return const AiMetricsScreen(key: ValueKey('AI Metrics'));
+        return const HomeScreen(key: ValueKey('Home'));
       case 3:
-        return const SettingsScreen(key: ValueKey('Settings'));
+        return const AiMetricsScreen(key: ValueKey('AI Metrics'));
+      // case 4:
+      //   return const SettingsScreen(key: ValueKey('Settings'));
       default:
         return const HomeScreen(key: ValueKey('Home'));
     }

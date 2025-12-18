@@ -1,15 +1,34 @@
 // week_selection_utils.dart, to handle custom selection logic for week view in the ai metrics screen
 
+import 'package:flutter/material.dart';
+
 DateTime? rangeStartDay;
 DateTime? rangeEndDay;
 DateTime? selectedDay;
 
 // when a day is tapped, calculate the start and end of that week and store it
+// DateTime updateWeekRange(DateTime selected) {
+//   final start = selected.subtract(Duration(days: selected.weekday - 1));
+//   final normalizedStart = DateTime(start.year, start.month, start.day);
+//   rangeStartDay = normalizedStart;
+//   rangeEndDay = normalizedStart.add(const Duration(days: 6));
+//   return normalizedStart;
+// }
+
 DateTime updateWeekRange(DateTime selected) {
-  final start = selected.subtract(Duration(days: selected.weekday - 1));
-  final normalizedStart = DateTime(start.year, start.month, start.day);
+  // treat Sunday (weekday == 7) as belonging to the previous mon - sun week
+  final adjustedSelected = selected.weekday == 7
+      ? selected.subtract(const Duration(days: 6))
+      : selected.subtract(Duration(days: selected.weekday - 1));
+
+  final normalizedStart = DateTime(
+      adjustedSelected.year, adjustedSelected.month, adjustedSelected.day);
   rangeStartDay = normalizedStart;
   rangeEndDay = normalizedStart.add(const Duration(days: 6));
+
+  debugPrint('[WEEK SELECTED] rangeStartDay: $rangeStartDay');
+  debugPrint('[WEEK SELECTED] rangeEndDay  : $rangeEndDay');
+
   return normalizedStart;
 }
 

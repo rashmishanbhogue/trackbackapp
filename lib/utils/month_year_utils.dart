@@ -2,16 +2,18 @@
 
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import '../screens/ai_metrics_screen.dart';
+import '../screens/aimetrics_screen.dart';
+import '../utils/aimetrics_filter_utils.dart';
 
 // build the month selector used in ai metrics screen, similar to the table calendar style
-Widget buildMonthView(
-    {required TimeFilter filter,
-    required DateTime focusedMonth,
-    required DateTime? selectedMonth,
-    required Function(DateTime, DateTime) onSelectedMonth,
-    required bool isDark,
-    required Set<DateTime> availableData}) {
+Widget buildMonthView({
+  required TimeFilter filter,
+  required DateTime focusedMonth,
+  required DateTime? selectedMonth,
+  required Function(DateTime, DateTime) onSelectedMonth,
+  required bool isDark,
+  required EntryRangeInfo entryRange,
+}) {
   // return stateless monthview with all passed params
   return MonthView(
     filter: filter,
@@ -19,7 +21,7 @@ Widget buildMonthView(
     selectedMonth: selectedMonth,
     onSelectedMonth: onSelectedMonth,
     isDark: isDark,
-    availableData: availableData,
+    entryRange: entryRange,
   );
 }
 
@@ -29,7 +31,7 @@ class MonthView extends StatelessWidget {
   final DateTime? selectedMonth;
   final Function(DateTime, DateTime) onSelectedMonth;
   final bool isDark;
-  final Set<DateTime> availableData;
+  final EntryRangeInfo entryRange;
 
   const MonthView({
     super.key,
@@ -38,7 +40,7 @@ class MonthView extends StatelessWidget {
     this.selectedMonth,
     required this.onSelectedMonth,
     required this.isDark,
-    required this.availableData,
+    required this.entryRange,
   });
 
   // single tile builder
@@ -49,20 +51,46 @@ class MonthView extends StatelessWidget {
     final isCurrent = now.month == monthIndex && now.year == focusedMonth.year;
 
     // check if the month is selected
-    final isSelected = selectedMonth?.month == monthIndex;
+    final isSelected = selectedMonth?.month == monthIndex &&
+        selectedMonth?.year == focusedMonth.year;
+
+    // check if the tile represents data that has entries in hive
+    final monthDate = DateTime(focusedMonth.year, monthIndex, 1);
+    final isEnabled = entryRange.availableMonths
+        .any((m) => m.year == monthDate.year && m.month == monthDate.month);
+
+    debugPrint(
+        'buildMonthTile → checking month: ${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}');
+    debugPrint('isEnabled: $isEnabled');
+
+    var tileColor = isSelected
+        ? AppTheme.weekHighlightDark
+        : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight);
+
+    tileColor = !isEnabled
+        ? (isDark ? AppTheme.surfaceLowDark : AppTheme.surfaceLowLight)
+        : (isSelected
+            ? AppTheme.weekHighlightDark
+            : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight));
+
+    final textColor = !isEnabled
+        ? (isDark ? Colors.grey.shade700 : Colors.grey.shade400)
+        : (isSelected
+            ? AppTheme.baseWhite
+            : (isDark ? Colors.grey.shade400 : Colors.grey.shade700));
 
     return GestureDetector(
-      onTap: () {
-        // trigger selection callback with selected month and current focus year
-        final selected = DateTime(focusedMonth.year, monthIndex);
-        onSelectedMonth(selected, focusedMonth);
-      },
+      onTap: isEnabled
+          ? () {
+              // trigger selection callback with selected month and current focus year
+              final selected = DateTime(focusedMonth.year, monthIndex);
+              onSelectedMonth(selected, focusedMonth);
+            }
+          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.weekHighlightDark
-              : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight),
+          color: tileColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Stack(
@@ -72,14 +100,8 @@ class MonthView extends StatelessWidget {
             // main month label
             Text(
               monthName(monthIndex),
-              style: TextStyle(
-                fontSize: isSelected ? 15 : 14,
-                color: isSelected
-                    ? AppTheme.baseWhite
-                    : (isDark
-                        ? AppTheme.textSecondaryDark
-                        : AppTheme.textSecondaryLight),
-              ),
+              style:
+                  TextStyle(fontSize: isSelected ? 15 : 14, color: textColor),
             ),
             // blue dot for current month
             if (isCurrent)
@@ -225,6 +247,7 @@ Widget buildYearView({
   required bool isDark,
   required Set<DateTime> availableData,
   required Function(DateTime) onFocusedYearChanged,
+  required EntryRangeInfo entryRange,
 }) {
   // return stateless yearview with all passed params
   return YearView(
@@ -235,6 +258,7 @@ Widget buildYearView({
     onFocusedYearChanged: onFocusedYearChanged,
     isDark: isDark,
     availableData: availableData,
+    entryRange: entryRange,
   );
 }
 
@@ -246,6 +270,7 @@ class YearView extends StatelessWidget {
   final bool isDark;
   final Set<DateTime> availableData;
   final Function(DateTime newFocusedYear) onFocusedYearChanged;
+  final EntryRangeInfo entryRange;
 
   const YearView({
     super.key,
@@ -256,6 +281,7 @@ class YearView extends StatelessWidget {
     required this.isDark,
     required this.availableData,
     required this.onFocusedYearChanged,
+    required this.entryRange,
   });
 
   // build each year tile in the decade grid
@@ -263,56 +289,63 @@ class YearView extends StatelessWidget {
     final now = DateTime.now();
     final isCurrent = now.year == year;
     final isSelected = selectedYear?.year == year;
-    final isDisabled = year > now.year;
+    final isEnabled = entryRange.availableYears.contains(year);
+
+    debugPrint('buildYearTile → checking year: $year');
+    debugPrint('isEnabled: $isEnabled');
+
+    var tileColor = isSelected
+        ? AppTheme.weekHighlightDark
+        : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight);
+
+    tileColor = !isEnabled
+        ? (isDark ? AppTheme.surfaceLowDark : AppTheme.surfaceLowLight)
+        : (isSelected
+            ? AppTheme.weekHighlightDark
+            : (isDark ? AppTheme.surfaceHighDark : AppTheme.surfaceHighLight));
+
+    final textColor = !isEnabled
+        ? (isDark ? Colors.grey.shade700 : Colors.grey.shade400)
+        : (isSelected
+            ? AppTheme.baseWhite
+            : (isDark ? Colors.grey.shade400 : Colors.grey.shade700));
 
     return GestureDetector(
-      onTap: isDisabled
-          ? null
-          : () {
+      onTap: isEnabled
+          ? () {
               final selected = DateTime(year);
               onSelectedYear(selected, focusedYear);
-            },
-      child: Opacity(
-        // fade and disable future years instead of not listing them
-        opacity: isDisabled ? 0.4 : 1,
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppTheme.weekHighlightDark
-                : (isDark
-                    ? AppTheme.surfaceHighDark
-                    : AppTheme.surfaceHighLight),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Stack(
-            // stack to center the year label text while allowing the precise placement of dot without affecting the label alignment
-            alignment: Alignment.center,
-            children: [
-              // main year label
-              Text(
-                '$year',
-                style: TextStyle(
-                  fontSize: isSelected ? 16 : 14,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? AppTheme.baseWhite
-                      : (isDark
-                          ? AppTheme.textPrimaryDark
-                          : AppTheme.textPrimaryLight),
+            }
+          : null,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: tileColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          // stack to center the year label text while allowing the precise placement of dot without affecting the label alignment
+          alignment: Alignment.center,
+          children: [
+            // main year label
+            Text(
+              '$year',
+              style: TextStyle(
+                fontSize: isSelected ? 16 : 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: textColor,
+              ),
+            ),
+            if (isCurrent)
+              const Positioned(
+                bottom: 4,
+                child: Icon(
+                  Icons.circle,
+                  size: 6,
+                  color: AppTheme.currentDotColor,
                 ),
               ),
-              if (isCurrent)
-                const Positioned(
-                  bottom: 4,
-                  child: Icon(
-                    Icons.circle,
-                    size: 6,
-                    color: AppTheme.currentDotColor,
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
