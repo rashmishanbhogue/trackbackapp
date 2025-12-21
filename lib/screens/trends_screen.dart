@@ -453,17 +453,53 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                 Tab(text: 'Year'),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                          ),
+                          IconButton(
+                            onPressed: () => showBadgeLegend(context),
+                            icon: const Icon(Icons.info_outline),
+                            tooltip: 'View Badge Details',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 20),
 
-                            // chevrons + display text
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  onPressed: canMoveBack()
-                                      ? () => moveReferenceDate(-1)
-                                      : null,
-                                  icon: const Icon(Icons.chevron_left),
+                      // container holding the tab section and its content
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Column(
+                            children: [
+                              // tabbar for day/week/month/year
+                              TabBar(
+                                controller: tabController,
+                                onTap: (index) {
+                                  final now = DateTime.now();
+                                  setState(() {
+                                    if (index == 0) {
+                                      viewType = 'Day';
+                                      referenceDate = DateTime(
+                                          now.year, now.month, now.day);
+                                    } else if (index == 1) {
+                                      viewType = 'Week';
+                                      referenceDate = now.subtract(
+                                          Duration(days: now.weekday - 1));
+                                    } else if (index == 2) {
+                                      viewType = 'Month';
+                                      referenceDate =
+                                          DateTime(now.year, now.month);
+                                    } else if (index == 3) {
+                                      viewType = 'Year';
+                                      referenceDate = DateTime(now.year);
+                                    }
+                                  });
+                                },
+                                dividerColor: Colors.transparent,
+                                indicatorColor: Colors.transparent,
+                                indicator: UnderlineTabIndicator(
+                                  borderSide: BorderSide(
+                                      color: selectedColor, width: 3),
                                 ),
                                 Row(
                                   children: [
@@ -546,20 +582,27 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                   );
                                 }).toList(),
                               ),
-                            ),
-
-                            const SizedBox(height: 16),
-                            const Divider(height: 16),
-                            const SizedBox(height: 16),
-
-                            // time of day distribution
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Time of Day Distribution:',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    'Morning',
+                                    'Afternoon',
+                                    'Evening',
+                                    'Night'
+                                  ].map((period) {
+                                    final count = metricsTimes[period] ?? 0;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
+                                      child: Text(
+                                        '$period : $count',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
                             ),

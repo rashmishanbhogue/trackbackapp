@@ -37,6 +37,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   // year visibility map for older entries
   final Map<String, bool> yearVisibility = {};
 
+  final Map<String, bool> yearVisibility = {};
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +88,18 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       final monthKey = DateFormat('yyyy-MM').format(dt);
       groupedByMonth.putIfAbsent(monthKey, () => []).add(date);
     }
+
+    final Map<String, Map<String, List<String>>> groupedByYear = {};
+
+    groupedByMonth.forEach((monthKey, dates) {
+      final parts = monthKey.split('-'); // yyyy-MM
+      final year = parts[0];
+      final month = parts[1];
+
+      groupedByYear.putIfAbsent(year, () => {});
+      groupedByYear[year]!.putIfAbsent(month, () => []);
+      groupedByYear[year]![month]!.addAll(dates);
+    });
 
     // group months by year for deep nesting
     final Map<String, Map<String, List<String>>> groupedByYear = {};

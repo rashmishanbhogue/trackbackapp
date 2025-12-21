@@ -3,10 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../widgets/completed_entries_section.dart';
-import '../utils/constants.dart';
-import '../utils/home_dialog_utils.dart';
-import '../models/entry.dart';
 import '../theme.dart';
 
 // expansiontiles for homescreen

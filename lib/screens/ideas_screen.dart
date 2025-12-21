@@ -1,19 +1,25 @@
-// profile_screen.dart, for user controls and access to the settings screen
+// ideas_screen.dart, for raw ideas capture dump
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../providers/date_entries_provider.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_fab.dart';
+import '../widgets/badges_svg.dart';
+import '../widgets/home_entries_list.dart';
+import '../widgets/older_expansion_chips.dart';
 import '../widgets/responsive_screen.dart';
+import '../models/entry.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+class IdeasScreen extends ConsumerStatefulWidget {
+  const IdeasScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => ProfileScreenState();
+  ConsumerState<IdeasScreen> createState() => IdeasScreenState();
 }
 
-class ProfileScreenState extends ConsumerState<ProfileScreen> {
+class IdeasScreenState extends ConsumerState<IdeasScreen> {
   late TextEditingController controller;
   final scrollController = ScrollController();
   @override
@@ -30,7 +36,11 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: CustomScrollView(
+              controller: scrollController,
             ),
+          ),
+        ),
+      ),
       floatingActionButton: CustomFAB(
         onPressed: () {
           if (controller.text.trim().isNotEmpty) {
