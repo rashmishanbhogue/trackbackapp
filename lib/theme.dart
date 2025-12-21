@@ -430,4 +430,17 @@ class AppTheme {
     final theme = Theme.of(context).colorScheme;
     return index.isEven ? theme.surfaceContainer : theme.surfaceContainerHigh;
   }
+
+  // colours for teh notes in ideas dump
+  static const List<Color> ideaColors = [
+    Color(0xFFFFF1B8), // soft yellow
+    Color(0xFFDFF2E1), // sage green
+    Color(0xFFFFE0D6), // soft coral
+    Color(0xFFE6F0FF), // baby blue
+    Color(0xFFEFE7F6), // lavender
+    Color(0xFFE9F5F1), // mint blue
+  ];
+
+  // hint text for idea cards
+  static const Color ideasHintTextLight = Color(0xFFA4A4A4);
 }

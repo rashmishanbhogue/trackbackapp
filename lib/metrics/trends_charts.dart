@@ -1,4 +1,4 @@
-// dashboard_charts.dart, to handle the pie chart and bar graph builds
+// trends_charts.dart, to handle the pie chart and bar graph builds
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +6,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/entry.dart';
 import '../theme.dart';
 
+// build a bar chart, presentational only with no state mutations
+// x axis granularity depends upon viewtype
 Widget buildBarChart(
   BuildContext context,
   List<Entry> entries,
@@ -14,12 +16,16 @@ Widget buildBarChart(
 ) {
   final theme = Theme.of(context);
   final now = referenceDate;
+  // x axis labels (day/week/month/year)
   List<String> xLabels = [];
+  // y axis values - entry counts
   List<int> yValues = [];
 
+  // filter entries defensively to isolate chart logic from caller mistakes
   final filteredDates =
       filterEntriesByViewType(entries, viewType, selectedDate: referenceDate);
 
+  // aggregate counts per calendar day
   final Map<String, int> data = {};
   for (var entry in filteredDates) {
     String key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
@@ -28,18 +34,22 @@ Widget buildBarChart(
     }
   }
 
+  // helper to keep x/y arrays in sync
   void addBar(String label, int count) {
     xLabels.add(label);
     yValues.add(count);
   }
 
+  // generate bars based on selected tieme resolution
   switch (viewType) {
     case 'Day':
+      // single bar for the selected day
       final today = DateFormat('yyyy-MM-dd').format(now);
       final count = data[today] ?? 0;
       addBar(DateFormat('dd/MM').format(now), count);
       break;
     case 'Week':
+      // 7 bars, one per weekday (mon-sun)
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
       for (int i = 0; i < 7; i++) {
         final date = startOfWeek.add(Duration(days: i));
@@ -49,6 +59,7 @@ Widget buildBarChart(
       }
       break;
     case 'Month':
+      // 4 or 5 bars depending upon the weekcount for that month
       final firstOfMonth = DateTime(now.year, now.month, 1);
       final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
       final numWeeks = ((firstOfMonth.weekday - 1 + daysInMonth) / 7).ceil();
@@ -64,6 +75,7 @@ Widget buildBarChart(
       }
       break;
     case 'Year':
+      // one bar per month
       for (int i = 1; i <= 12; i++) {
         int monthTotal = 0;
         final firstDay = DateTime(now.year, i, 1);
@@ -73,6 +85,7 @@ Widget buildBarChart(
           final key = DateFormat('yyyy-MM-dd').format(day);
           monthTotal += data[key] ?? 0;
         }
+        // single letter month labels to avoid overcrowding
         final label =
             DateFormat('MMM', 'en_US').format(firstDay)[0].toUpperCase();
         addBar(label, monthTotal);
@@ -82,17 +95,20 @@ Widget buildBarChart(
       return const Center(child: Text('Invalid view type'));
   }
 
+  // determine chart scale dynamically
   final maxY = yValues.isEmpty
       ? 5.0
       : (yValues.reduce((a, b) => a > b ? a : b)).toDouble() + 1.0;
 
   return LayoutBuilder(
     builder: (context, constraints) {
+      // calculate bar width dynamically to stay responsive
       const horizontalPadding = 16.0;
       final availableWidth = constraints.maxWidth - (horizontalPadding * 2);
       final barWidth =
           availableWidth / (xLabels.length < 7 ? 7 : xLabels.length);
 
+      // detect empty state
       final noData = yValues.every((y) => y == 0);
 
       return SizedBox(
@@ -163,6 +179,7 @@ Widget buildBarChart(
                         }),
                         extraLinesData: ExtraLinesData(
                           horizontalLines: [
+                            // dashed max lines for quick visual comparison
                             if (!noData)
                               HorizontalLine(
                                 y: yValues
@@ -172,7 +189,7 @@ Widget buildBarChart(
                                 strokeWidth: 1,
                                 dashArray: [4, 4],
                               ),
-                            // x axis dotted line
+                            // x axis dotted base line
                             HorizontalLine(
                               y: 0,
                               color: theme.brightness == Brightness.dark
@@ -185,6 +202,7 @@ Widget buildBarChart(
                         ),
                       ),
                     ),
+                    // overlay dynamic empty state message
                     if (noData)
                       Align(
                         alignment: const Alignment(0, -0.4),
@@ -221,6 +239,8 @@ Widget buildBarChart(
   );
 }
 
+// doughnut pie chart for badge distribution
+// used only when at least one badge has non zero count
 Widget buildPieChart(
   BuildContext context,
   Map<String, int> badgeCountMap,
@@ -230,6 +250,7 @@ Widget buildPieChart(
   final theme = Theme.of(context);
   final total = badgeCountMap.values.fold(0, (a, b) => a + b);
 
+  // handle empty state explicitly to avoid misleading visuals
   if (total == 0) {
     final noDataMessage = () {
       switch (viewType) {
@@ -294,6 +315,7 @@ Widget buildPieChart(
     );
   }
 
+  // only render sloces with non zero values
   final validEntries =
       badgeCountMap.entries.where((entry) => entry.value > 0).toList();
 
@@ -339,6 +361,7 @@ Widget buildPieChart(
   );
 }
 
+// filter entries based on the active tiem resolution - both charts and metrics logic share this
 List<Entry> filterEntriesByViewType(List<Entry> entries, String viewType,
     {DateTime? selectedDate}) {
   final now = selectedDate ?? DateTime.now();
@@ -383,6 +406,7 @@ List<Entry> filterEntriesByViewType(List<Entry> entries, String viewType,
   return filteredEntries;
 }
 
+// map entry count to badge category
 String getBadgeForEntries(int totalEntries) {
   if (totalEntries == 0) return 'Grey'; // 0 entries, grey
   if (totalEntries >= 20) return 'Red'; // 20 or more entries, red
@@ -392,6 +416,7 @@ String getBadgeForEntries(int totalEntries) {
   return 'Yellow'; // 1-4 entries, yellow
 }
 
+// resolve badge name to theme color
 Color getColorForBadge(String badge) {
   switch (badge) {
     case 'Yellow':

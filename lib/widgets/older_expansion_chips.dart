@@ -1,4 +1,4 @@
-// older_expansion_chips.dart, homescreen lazy load sliver for entries older than currentmonth
+// older_expansion_chips.dart, homescreen lazy load sliver for entries older than currentmonth (year - month - day)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,20 +9,31 @@ import '../widgets/completed_entries_section.dart';
 import '../utils/home_dialog_utils.dart';
 
 class OlderExpansionSliver extends StatelessWidget {
+  // {'2025': {'01': ['2025-01-02', '2025-01-05'], '02': [...]}, ...}
   final Map<String, Map<String, List<String>>> groupedbyYear;
+  // actual entry payloads per date
   final Map<String, List<Entry>> dateEntries;
+  // flat list of all dates used to derive stable indices
   final List<String> previousDates;
 
+  // control whether a full year section is expanded
   final Map<String, bool> yearVisibility;
+  // control whether a specific month inside a year is expanded
   final Map<String, bool> monthVisibility;
 
+  // currently expadned chip (only one chip globally)
   final int? expandedChipIndex;
+  // toggle expandeChipIndex in parent
   final Function(int?) onChipTap;
 
+  // toggle visibility of an entire year section
   final Function(String year) onYearToggle;
+  // toggle visibility of a month within a year
   final Function(String monthKey) onMonthToggle;
 
+  // key used to scroll expanded tiles into view reliably
   final Map<String, GlobalKey> expansionTileKeys;
+  // needed for delete confirmation dialog provider access
   final WidgetRef ref;
 
   final bool isDark;
@@ -45,6 +56,7 @@ class OlderExpansionSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // currentdate to exclude already rendered current month (previous days section)
     final now = DateTime.now();
     final currentYear = now.year.toString();
     final currentMonth = now.month;
@@ -55,6 +67,7 @@ class OlderExpansionSliver extends StatelessWidget {
       final year = yearEntry.key;
       final months = yearEntry.value;
 
+      // ensure year visibility state exists
       yearVisibility.putIfAbsent(year, () => false);
 
       // build list for this year only
@@ -92,23 +105,27 @@ class OlderExpansionSliver extends StatelessWidget {
         ),
       );
 
+      // if year is collapsed, stop - lazy loading
       if (!(yearVisibility[year] ?? false)) {
         return yearWidgets;
       }
 
+      // build months only when the year is expanded
       yearWidgets.addAll(
         months.entries.expand((monthEntry) {
           final month = int.parse(monthEntry.key);
           final dates = monthEntry.value;
 
-          final totalEntriesforMonth = dates
-              .expand((date) => dateEntries[date] ?? [])
-              .length; // get total entries for a month
+          // aggregate total count for month label
+          final totalEntriesforMonth =
+              dates.expand((date) => dateEntries[date] ?? []).length;
 
+          // skip current month (rendered under previous days section)
           if (year == currentYear && month == currentMonth) {
             return <Widget>[];
           }
 
+          // stable keu for month-level visibility
           final monthKey = '$year-${month.toString().padLeft(2, '0')}';
           monthVisibility.putIfAbsent(monthKey, () => false);
 
@@ -148,17 +165,19 @@ class OlderExpansionSliver extends StatelessWidget {
             ),
           );
 
+          // if month is collapsed, do not build teh date chips
           if (!(monthVisibility[monthKey] ?? false)) {
             return monthWidgets;
           }
 
-          // horizontal chips
+          // horizontal chips (scrollable dates)
           monthWidgets.add(
             SizedBox(
               height: 56,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: dates.map((date) {
+                  // hashcode to avoid index collisions across months
                   final key = date.hashCode;
                   final isSelected = expandedChipIndex == key;
 
@@ -179,6 +198,7 @@ class OlderExpansionSliver extends StatelessWidget {
                       ),
                       selected: isSelected,
                       onSelected: (_) {
+                        // ensure only one chip is expanded globally
                         onChipTap(isSelected ? null : key);
                       },
                       backgroundColor: Colors.transparent,
@@ -200,11 +220,13 @@ class OlderExpansionSliver extends StatelessWidget {
           );
 
           // expanded tile
+          // resolve which date is currently expanded for this month
           final expandedDate = dates.firstWhere(
             (d) => expandedChipIndex == d.hashCode,
             orElse: () => '',
           );
 
+          // render expanded entry list ony for the active date
           if (expandedDate.isNotEmpty) {
             monthWidgets.add(
               CompletedEntriesSection(

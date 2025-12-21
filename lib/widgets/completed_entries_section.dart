@@ -1,4 +1,4 @@
-// completed_entries_section.dart, to handle the expansion chips logic and animation in the homescreen
+// completed_entries_section.dart, to handle the single date expansion chips logic and animation in the homescreen
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +13,7 @@ class CompletedEntriesSection extends StatelessWidget {
   final VoidCallback onToggle;
   final GlobalKey tileKey;
   final int colorIndex;
+  // optional dismiss confirmation used for deletion
   final Future<bool?> Function(DismissDirection)? confirmDismiss;
   // final WidgetRef ref;
 
@@ -35,10 +36,15 @@ class CompletedEntriesSection extends StatelessWidget {
 
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
+        // enable swipe to delete for the entire date section
         child: Dismissible(
+          // date is used as key as it is stable and unique
           key: Key(date),
+          // only allow swipe right to left
           direction: DismissDirection.endToStart,
+          // delegate delete confirmation to parent
           confirmDismiss: confirmDismiss,
+          // background while swiping
           background: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Container(
@@ -52,22 +58,26 @@ class CompletedEntriesSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: Container(
               decoration: BoxDecoration(
+                // color based on index for consistency alternative shades
                 color: AppTheme.getHomeTileColor(colorIndex, context),
                 borderRadius: BorderRadius.circular(20),
+                // highlight border when expanded to indicate focus
                 border: isExpanded
                     ? Border.all(color: theme.colorScheme.primary, width: 1)
                     : null,
               ),
               child: Column(
+                // key used for scroll to visible logic in parent
                 key: tileKey,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // header
+                  // header - always visible
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 14, horizontal: 16),
                     title: Row(
                       children: [
+                        // formatted date label
                         Text(
                           DateFormat('dd-MM-yyyy').format(DateTime.parse(date)),
                           style: TextStyle(
@@ -77,16 +87,18 @@ class CompletedEntriesSection extends StatelessWidget {
                               fontWeight: FontWeight.w400),
                         ),
                         const Spacer(),
+                        // badge
                         buildBadge(entries.length),
                       ],
                     ),
                     onTap: onToggle,
                   ),
 
-                  // expandable body
+                  // expandable body containing individual entries
                   AnimatedSize(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
+                      // only render entries when expanded
                       child: isExpanded
                           ? Column(
                               children: entries.map((entry) {
@@ -95,6 +107,7 @@ class CompletedEntriesSection extends StatelessWidget {
                                     entry.text,
                                     style: theme.textTheme.bodyLarge,
                                   ),
+                                  // collapse when entry is tapped
                                   onTap: onToggle,
                                 );
                               }).toList(),

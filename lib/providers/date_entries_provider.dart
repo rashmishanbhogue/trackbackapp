@@ -1,4 +1,4 @@
-// data_entries_provider.dart
+// data_entries_provider.dart, state + persistnece layer for daily entries in the primary hive box
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -6,10 +6,12 @@ import 'dart:convert';
 import '../models/entry.dart';
 import '../utils/hive_utils.dart';
 
+// injected hive box provider, kept as a provider to make this notifier testable and decoupled
 final hiveBoxProvider = Provider<Box>((ref) {
-  throw UnimplementedError(); // will be overridden in main() with the real hive box
+  throw UnimplementedError(); // will be overridden in main() with the real hive box at runtime
 });
 
+// central source of truth for all screens but ideas - exposes a map of yyyy-mm-dd list of entries
 final dateEntriesProvider =
     StateNotifierProvider<DateEntriesNotifier, Map<String, List<Entry>>>(
   (ref) {
@@ -21,10 +23,12 @@ final dateEntriesProvider =
 class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
   final Box box;
 
+  // notifier starts empty and immediately hydrates from primary hive
   DateEntriesNotifier(this.box) : super({}) {
     loadEntries();
   }
 
+  // loads persisted entries from hive into memory - converts raw json strings back into Entry objects
   void loadEntries() {
     final stored = box.get('entries');
     // debugPrint('Raw from Hive: $stored');
@@ -35,18 +39,19 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
           final date = e.key as String;
           final rawList = e.value;
 
+          // defensive if data shape is unexpected, return empty list
           if (rawList is! List) return MapEntry(date, <Entry>[]);
 
           final entries = rawList
               .map<Entry?>((item) {
                 try {
                   if (item is String) {
-                    // if item looks like a json object, parse it
+                    // if item looks like a json object, parse it. normal path - stored json string
                     if (item.trim().startsWith('{')) {
                       final json = jsonDecode(item);
                       return Entry.fromJson(json);
                     } else {
-                      // fallback for older or raw text entries
+                      // fallback for older or raw text entries. preserves text but resets label + timestamp
                       return Entry(
                           text: item, label: '', timestamp: DateTime.now());
                     }
@@ -54,6 +59,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
                     return null;
                   }
                 } catch (e) {
+                  // swallow parsing errors to avoid crashing on corrupt data
                   return null;
                 }
               })
@@ -65,7 +71,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
       );
       state = parsed; // update state with loaded entries
     } else {
-      state = {}; // no entries yet
+      state = {}; // no entries yet, first run
     }
   }
 
@@ -79,6 +85,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     return await getLabelsFromHive();
   }
 
+  // add a single entry under a date key - update both memory state and hive
   void addEntry(String date, Entry entry) {
     final updatedEntries = Map<String, List<Entry>>.from(state);
 
@@ -87,7 +94,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
 
     state = updatedEntries; // update state in memory
 
-    // store as json strings in hive
+    // store as json strings in hive for compatibility
     final storedMap = updatedEntries.map(
       (key, value) => MapEntry(
         key,
@@ -98,6 +105,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     box.put('entries', storedMap); // save to hive
   }
 
+  // remove a single entry by matching text + timestamp - avoid accidental deletion of similar entries
   void removeEntry(String date, Entry entry) {
     final updatedEntries = Map<String, List<Entry>>.from(state);
 
@@ -123,6 +131,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     box.put('entries', storedMap); // save to hive
   }
 
+  // remove all entries for a specific date - ysed by bulk delete flows
   void removeEntriesForDate(String date) {
     final updatedEntries = Map<String, List<Entry>>.from(state);
 
@@ -140,6 +149,7 @@ class DateEntriesNotifier extends StateNotifier<Map<String, List<Entry>>> {
     box.put('entries', storedMap); // save to hive
   }
 
+  // replace tje entire entries map - used after ai labeling to persist updated labels in bulk
   void replaceAll(Map<String, List<Entry>> newEntries) {
     state = newEntries;
 

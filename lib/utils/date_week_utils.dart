@@ -30,7 +30,6 @@ Icon getChevronIcon(
 }
 
 // dynamic header style using chevron change due to table_calendar built-in limitations
-
 HeaderStyle getDynamicHeaderStyle(
     {required DateTime visibleMonth,
     required DateTime firstMonth,
@@ -59,6 +58,8 @@ HeaderStyle getDynamicHeaderStyle(
           isDark: isDark));
 }
 
+// build the day selection calendar for aimetrics
+// handle disabled dates, future dates, visual feedback on invalid taps
 Widget buildDayCalendar({
   required TimeFilter filter,
   required DateTime focusedDay,
@@ -79,6 +80,7 @@ Widget buildDayCalendar({
   final calendarStyle =
       isDark ? AppTheme.calendarStyleDark : AppTheme.calendarStyleLight;
 
+  // ensure focused day never leaves valid bounds
   DateTime clampFocusedDay(DateTime day, DateTime first, DateTime last) {
     if (day.isBefore(first)) return first;
     if (day.isAfter(last)) return last;
@@ -93,12 +95,14 @@ Widget buildDayCalendar({
       lastDay: lastMonth,
       focusedDay: clampFocusedDay(focusedDay, firstMonth, lastMonth),
       selectedDayPredicate: (day) => isSameDay(day, selectedDay),
+      // disable days that have no entries
       enabledDayPredicate: (day) {
         final d = DateTime(day.year, day.month, day.day);
         return entryInfo.availableDays.isEmpty ||
             entryInfo.availableDays.contains(d);
       },
       onDaySelected: (pickedDay, focusedDay) {
+        // normalise and propagate selection
         selectedDay = DateTime(pickedDay.year, pickedDay.month,
             pickedDay.day); // from aimetrics_filter_utils.dart
         onDaySelected(
@@ -112,6 +116,7 @@ Widget buildDayCalendar({
           isDark: isDark),
       daysOfWeekStyle: daysOfWeekStyle,
       calendarStyle: calendarStyle,
+      // custom builders required to intercept taps on disabled days
       calendarBuilders: defaultCalendarBuilder(
           isDark, filter, entryInfo, setState, onDisabledDayTap),
       onPageChanged: (visibleMonth) {
@@ -122,6 +127,7 @@ Widget buildDayCalendar({
       });
 }
 
+// custom calendar builders for day filter - allow disabled dates to still receive tap feedback
 CalendarBuilders defaultCalendarBuilder(
   bool isDark,
   TimeFilter filter,
@@ -197,6 +203,8 @@ CalendarBuilders defaultCalendarBuilder(
   );
 }
 
+// build the week selection calendar
+// uses per day enabling becaue tablecalendar has no concept of weeks
 Widget buildWeekCalendar({
   required List<Entry> allEntries,
   required DateTime focusedWeek,
@@ -241,52 +249,11 @@ Widget buildWeekCalendar({
     ),
     currentDay: DateTime.now(),
 
+    // enable only dates that belong to weeks with entries
     enabledDayPredicate: (day) {
       final normalized = DateTime(day.year, day.month, day.day);
       return enabledDates.contains(normalized);
     },
-
-    // enabledDayPredicate: (day) {
-    //   // preserve previous behavior when no data exists
-    //   if (entryInfo.availableDays.isEmpty) return true;
-
-    //   final normalized = DateTime(day.year, day.month, day.day);
-    //   return entryInfo.availableDays.contains(normalized);
-    // },
-
-    // enabledDayPredicate: (day) {
-    //   final startOfWeek = getStartOfWeek(day);
-
-    //   for (int i = 0; i < 7; i++) {
-    //     final checkDay = startOfWeek.add(Duration(days: i));
-    //     if (entryInfo.availableDays.any((d) =>
-    //         d.year == checkDay.year &&
-    //         d.month == checkDay.month &&
-    //         d.day == checkDay.day)) {
-    //       return true;
-    //     }
-    //   }
-    //   return false;
-    // },
-
-    // enabledDayPredicate: (day) {
-    //   if (entryInfo.availableDays.isEmpty) return true;
-
-    //   final startOfWeek = getStartOfWeek(day);
-
-    //   // if any date in this week exists in availableDays, allow it
-    //   for (int i = 0; i < 7; i++) {
-    //     final checkDay = startOfWeek.add(Duration(days: i));
-    //     if (entryInfo.availableDays.contains(checkDay)) {
-    //       return true;
-    //     }
-    //   }
-
-    //   return false;
-    // },
-
-    // selectedDayPredicate: (_) => false,
-    // selectedDayPredicate: (day) => isSameDay(day, rangeStartDay),
     onDaySelected: (selected, focused) {
       setState(() {
         final selectedNormalized =
@@ -299,11 +266,6 @@ Widget buildWeekCalendar({
       setStateOverlay(); // rebuild the overlay
       onWeekSelected(selected, focused);
     },
-    // selectedDayPredicate: (day) {
-    //   if (rangeStartDay == null || rangeEndDay == null) return false;
-    //   return day.isAfter(rangeStartDay!.subtract(const Duration(days: 1))) &&
-    //       day.isBefore(rangeEndDay!.add(const Duration(days: 1)));
-    // },
 
     onPageChanged: (visibleMonth) {
       setState(() {
@@ -338,6 +300,7 @@ Widget buildWeekCalendar({
   );
 }
 
+// return true if a day lies within the selected week range
 bool isInWeekRange(
     DateTime day, DateTime? rangeStartDay, DateTime? rangeEndDay) {
   if (rangeStartDay == null || rangeEndDay == null) return false;
@@ -345,6 +308,7 @@ bool isInWeekRange(
       day.isBefore(rangeEndDay.add(const Duration(days: 1)));
 }
 
+// render a connected pill filter style week range cell (period calendar inspired, mon-sun)
 Widget buildWeekRangeCell(
   BuildContext context,
   DateTime day,
@@ -375,6 +339,7 @@ Widget buildWeekRangeCell(
   );
 }
 
+// calendar builders for week selection - handles range rendering and disabled week taps
 CalendarBuilders buildWeekCalendarBuilders(
   bool isDark,
   EntryRangeInfo entryInfo,
@@ -414,6 +379,7 @@ CalendarBuilders buildWeekCalendarBuilders(
   });
 }
 
+// utility helpers used across calendars
 DateTime getStartOfWeek(DateTime date) {
   return date.subtract(Duration(days: date.weekday - 1));
 }
@@ -422,9 +388,10 @@ DateTime getEndOfWeek(DateTime date) {
   return date.add(Duration(days: 7 - date.weekday));
 }
 
+// extract normalised calendar days that contain entries - used to determine which weeks are selectable
 Set<DateTime> getEnabledDatesWithEntries(List<Entry> allEntries) {
   return allEntries.map((entry) {
-    final ts = entry.timestamp; // or entry.date if that's your model field
+    final ts = entry.timestamp;
     return DateTime(ts.year, ts.month, ts.day);
   }).toSet();
 }

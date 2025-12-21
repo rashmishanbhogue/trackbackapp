@@ -1,4 +1,4 @@
-// dashboard_screen.dart, display bar charts for total entries and pie charts for badges earned
+// trends_screen.dart, display bar charts for total entries and pie charts for badges earned
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,40 +11,56 @@ import '../providers/date_entries_provider.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_fab.dart';
 import '../widgets/responsive_screen.dart';
-import '../metrics/dashboard_metrics_utils.dart';
-import '../metrics/dashboard_charts.dart';
+import '../metrics/trends_metrics_utils.dart';
+import '../metrics/trends_charts.dart';
 import '../models/entry.dart';
 import '../theme.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+// ConsumerStatefulWidget for reactive access to dateEntriesProvider
+class TrendsScreen extends ConsumerStatefulWidget {
+  const TrendsScreen({super.key});
 
   @override
-  ConsumerState<DashboardScreen> createState() => DashboardScreenState();
+  ConsumerState<TrendsScreen> createState() => TrendsScreenState();
 }
 
-class DashboardScreenState extends ConsumerState<DashboardScreen>
+// TabController requires a vsync source
+// TickerProviderStateMixin prevents offscreen animation ticks and memory leaks
+// and allows smooth lifecycle aware tab transitions
+class TrendsScreenState extends ConsumerState<TrendsScreen>
     with TickerProviderStateMixin {
+  // active aggregation mode for metrics, drives filtering, labels and navigation logic
   String viewType = 'Day';
+
+  // anchor date for the current view, meaning changes by viewtype - day/week/momth/year start
   DateTime referenceDate = DateTime.now();
+
   bool isBarChart = true;
   late TabController tabController;
+
+  // local selection used for filtering
   late DateTime selectedDate;
+
+  // shortcut to avoid repeated provider reads
   Map<String, List<Entry>> get dateEntries => ref.read(dateEntriesProvider);
+  // cache computed metrics to avoid recomputing heavy aggregates on every rebuild
   final Map<String, Map<String, dynamic>> metricsCache =
       {}; // keyed as "$viewType|$refDateIso"
 
   // lazy background metrics cache
   bool isBackgroundLoading = false;
+
+  // lazily populate cache for all views
   Map<String, dynamic>?
       metricsCacheByView; // keyed by viewType, each value has 'entries' (iso), 'times', 'badgeCountMap'
 
-  // lazy gather timestamp and compute metrics for other views in background isolate
+  // lazy gather timestamp and precompute metrics for other views in background isolate
+  // day view renders immediately, others hydrate lazily
   Future<void> startBackgroundLoad() async {
     final dateEntriesMap = ref.read(dateEntriesProvider);
     if (dateEntriesMap.isEmpty) return;
 
-    // serialise timstamps
+    // serialise timstamps only (lighter payload for isolates)
     final timestamps = dateEntriesMap.values
         .expand((list) => list)
         .map((e) => e.timestamp.toIso8601String())
@@ -56,6 +72,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
       isBackgroundLoading = true;
     });
 
+    // compute() can fail silently or throw to avoid ui crash or stuck loading
     try {
       // compute metrics for day/ week/ month/ year (day will be returned but day is also instantly rendered)
       final result = await compute(
@@ -86,7 +103,10 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     selectedDate = DateTime.now();
+
+    // fixed 4 views
     tabController = TabController(length: 4, vsync: this);
+    // sync viewtype when user taps a tab
     tabController.addListener(() {
       setState(() {
         switch (tabController.index) {
@@ -109,6 +129,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     updateReferenceDate();
   }
 
+  // normalise referencedate based on viewtype
+  // to ensure navigation always moves in full logical units
   void updateReferenceDate() {
     final now = DateTime.now();
     switch (viewType) {
@@ -127,6 +149,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
+  // move referencedate backward or forward by one logical unit, -1 back, +1 forward
   void moveReferenceDate(int direction) {
     setState(() {
       if (viewType == 'Day') {
@@ -142,6 +165,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     });
   }
 
+  // user facing label for the current reference window
+  // intuitive today/ yesterday/ this week/ this month/ this year etc wherever applicable
   String getDisplayText() {
     final now = DateTime.now();
 
@@ -182,6 +207,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     return '';
   }
 
+  // prevent navigating before first recorded entry to avoid showing empty charts and hardcoding the oldest view
   bool canMoveBack() {
     // final now = DateTime.now();
     final allEntries = dateEntries.values.expand((list) => list).toList();
@@ -213,6 +239,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     return false;
   }
 
+  // prevent navigating into the future
   bool canMoveForward() {
     final now = DateTime.now();
 
@@ -254,6 +281,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     return false;
   }
 
+  // load metrics lazily for a specific view/date pair
+  // heavy computation si offloaded to an isolate
   Future<void> loadMetrics(String viewType, DateTime date) async {
     final key = "$viewType|${date.toIso8601String()}";
     if (metricsCache.containsKey(key)) return; // already cached
@@ -362,6 +391,73 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                             onPressed: () => showBadgeLegend(context),
                             icon: const Icon(Icons.info_outline),
                             tooltip: 'View Badge Details',
+                            color: AppTheme.iconDefaultLight,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // container holding the tab section and its content
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Column(children: [
+                            // tabbar for day/week/month/year
+                            TabBar(
+                              controller: tabController,
+                              onTap: (index) {
+                                final now = DateTime.now();
+                                setState(() {
+                                  if (index == 0) {
+                                    viewType = 'Day';
+                                    referenceDate =
+                                        DateTime(now.year, now.month, now.day);
+                                  } else if (index == 1) {
+                                    viewType = 'Week';
+                                    referenceDate = now.subtract(
+                                        Duration(days: now.weekday - 1));
+                                  } else if (index == 2) {
+                                    viewType = 'Month';
+                                    referenceDate =
+                                        DateTime(now.year, now.month);
+                                  } else if (index == 3) {
+                                    viewType = 'Year';
+                                    referenceDate = DateTime(now.year);
+                                  }
+                                });
+                              },
+                              dividerColor: Colors.transparent,
+                              indicatorColor: Colors.transparent,
+                              indicator: UnderlineTabIndicator(
+                                borderSide:
+                                    BorderSide(color: selectedColor, width: 3),
+                              ),
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              labelColor: selectedColor,
+                              unselectedLabelColor: unselectedColor,
+                              labelStyle: const TextStyle(
+                                fontFamily: 'SF Pro',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                height: 1.42,
+                                letterSpacing: 0.1,
+                              ),
+                              labelPadding:
+                                  const EdgeInsets.symmetric(vertical: 6),
+                              tabs: const [
+                                Tab(text: 'Day'),
+                                Tab(text: 'Week'),
+                                Tab(text: 'Month'),
+                                Tab(text: 'Year'),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => showBadgeLegend(context),
+                            icon: const Icon(Icons.info_outline),
+                            tooltip: 'View Badge Details',
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           )
@@ -405,134 +501,32 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                   borderSide: BorderSide(
                                       color: selectedColor, width: 3),
                                 ),
-                                indicatorSize: TabBarIndicatorSize.tab,
-                                labelColor: selectedColor,
-                                unselectedLabelColor: unselectedColor,
-                                labelStyle: const TextStyle(
-                                  fontFamily: 'SF Pro',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.42,
-                                  letterSpacing: 0.1,
-                                ),
-                                labelPadding:
-                                    const EdgeInsets.symmetric(vertical: 6),
-                                tabs: const [
-                                  Tab(text: 'Day'),
-                                  Tab(text: 'Week'),
-                                  Tab(text: 'Month'),
-                                  Tab(text: 'Year'),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-
-                              // chevrons + display text
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    onPressed: canMoveBack()
-                                        ? () => moveReferenceDate(-1)
-                                        : null,
-                                    icon: const Icon(Icons.chevron_left),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        getDisplayText(),
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                Row(
+                                  children: [
+                                    Text(
+                                      getDisplayText(),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedColor,
+                                      ),
+                                    ),
+                                    if (!isOnTodayAnchor()) ...[
+                                      const SizedBox(width: 6),
+                                      IconButton(
+                                        onPressed: () =>
+                                            jumpToToday(DateTime.now()),
+                                        icon: Icon(
+                                          Icons.calendar_today,
+                                          size: 16,
                                           color: selectedColor,
                                         ),
+                                        tooltip: 'Jump to today',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
                                       ),
-                                      if (!isOnTodayAnchor()) ...[
-                                        const SizedBox(width: 6),
-                                        IconButton(
-                                          onPressed: () =>
-                                              jumpToToday(DateTime.now()),
-                                          icon: Icon(
-                                            Icons.calendar_today,
-                                            size: 16,
-                                            color: selectedColor,
-                                          ),
-                                          tooltip: 'Jump to today',
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
-                                      ],
                                     ],
-                                  ),
-                                  IconButton(
-                                    onPressed: canMoveForward()
-                                        ? () => moveReferenceDate(1)
-                                        : null,
-                                    icon: const Icon(Icons.chevron_right),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-
-                              // bar graph or pie chart inside TabBarView
-                              Expanded(
-                                child: TabBarView(
-                                  controller: tabController,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  children: ['Day', 'Week', 'Month', 'Year']
-                                      .map((tabType) {
-                                    // filter entries for this tab
-                                    final allEntries = dateEntries.values
-                                        .expand((list) => list)
-                                        .toList();
-                                    final filteredEntries =
-                                        filterEntriesByViewType(
-                                      allEntries,
-                                      tabType,
-                                      selectedDate: referenceDate,
-                                    );
-
-                                    // badge counts for this tab
-                                    final badgeCountMap = calculateBadgeCount(
-                                      filteredEntries,
-                                      tabType,
-                                      selectedDate: referenceDate,
-                                    );
-
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8),
-                                      child: SizedBox.expand(
-                                        child: isBarChart
-                                            ? buildBarChart(
-                                                context,
-                                                filteredEntries,
-                                                tabType,
-                                                referenceDate)
-                                            : buildPieChart(
-                                                context,
-                                                badgeCountMap,
-                                                tabType,
-                                                referenceDate),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-
-                              const SizedBox(height: 16),
-                              const Divider(height: 16),
-                              const SizedBox(height: 16),
-
-                              // time of day distribution
-                              const Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Time of Day Distribution:',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  ],
                                 ),
                                 IconButton(
                                   onPressed: canMoveForward()
@@ -612,7 +606,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
+
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Column(
@@ -636,9 +631,9 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
                               ),
                             ),
                             const SizedBox(height: 16),
-                          ],
+                          ]),
                         ),
-                      ),
+                      )
                     ],
                   ),
                 ),
@@ -729,6 +724,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  // calendar button to take to /today/ view on scroll
   void jumpToToday(DateTime anchor) {
     setState(() {
       switch (viewType) {
@@ -748,6 +744,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
     });
   }
 
+  // to make the calendar icon disappear if the view is on /today/
   bool isOnTodayAnchor() {
     final now = DateTime.now();
 
