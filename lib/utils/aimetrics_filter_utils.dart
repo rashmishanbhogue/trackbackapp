@@ -6,6 +6,7 @@ import '../utils/week_selection_utils.dart';
 import '../models/entry.dart';
 import '../screens/aimetrics_screen.dart';
 
+// return all unique calendar days yyyy-mm-dd that have entries - used to enable/ disable selectable days in the day filter calendar
 List<DateTime> getAvailableDates(List<Entry> entries) {
   return entries
       .map((entry) => DateTime(
@@ -15,14 +16,17 @@ List<DateTime> getAvailableDates(List<Entry> entries) {
     ..sort((a, b) => a.compareTo(b));
 }
 
+// return all unique months that ppear in the entry set - used for month level filtering
 List<int> getAvailableMonths(List<Entry> entries) {
   return entries.map((entry) => entry.timestamp.month).toSet().toList();
 }
 
+// return all unique years that appear in the entry set - used for year level filtering and navigation bounds
 List<int> getAvailableYears(List<Entry> entries) {
   return entries.map((entry) => entry.timestamp.year).toSet().toList();
 }
 
+// reutrn unique weeks represented as 'yyyy-mm-dd' - used to mark which weeks are selectable in the week filter (mon-sun)
 List<String> getAvailableWeeks(List<Entry> entries) {
   return entries
       .map((entry) {
@@ -34,6 +38,9 @@ List<String> getAvailableWeeks(List<Entry> entries) {
       .toList();
 }
 
+// core filter used by ai metrics
+// filters based on the currently active tiemfilter selection (all/day/week/month/year) - drived by the overlay ui, no parameters
+// intentionally depends upon the shared state (selectedday/rangestartday)
 List<Entry> filterEntriesByViewTypeAi({
   required List<Entry> entries,
   required TimeFilter viewType,
@@ -63,11 +70,12 @@ List<Entry> filterEntriesByViewTypeAi({
         return isMatch;
 
       default:
-        return true;
+        return true; // timefilter.all
     }
   }).toList();
 }
 
+// resolve canonical referencedate for the currently active filter - single source of truth when applying filters
 DateTime getReferenceDateForFilter({
   required TimeFilter filter,
   required DateTime selectedDay,
@@ -89,10 +97,12 @@ DateTime getReferenceDateForFilter({
   }
 }
 
+// group entries into their broader ai categories
+// ensures all standard 6 categories are present even if they contain zero entries (ui stability)
 Map<String, List<Entry>> groupEntriesByLabel(List<Entry> entries) {
   final map = <String, List<Entry>>{};
 
-  // Pre-fill with empty lists for all standard categories
+  // prefill with empty lists for all standard categories
   for (final category in standardCategories) {
     map[category] = [];
   }
@@ -106,6 +116,8 @@ Map<String, List<Entry>> groupEntriesByLabel(List<Entry> entries) {
   return map;
 }
 
+// immutable container describing the valid date range of all entries
+// used to clamp calendar navigation and disable invalid selections
 class EntryRangeInfo {
   final DateTime firstDate;
   final DateTime lastDate;
@@ -123,6 +135,8 @@ class EntryRangeInfo {
       required this.availableYears});
 }
 
+// compute the full selectable range from all entries
+// called once on load and reused across all filter overlays
 EntryRangeInfo calculateEntryRangeInfo(List<Entry> entries) {
   // debugPrint(
   //     'before IF calculateEntryRangeInfo called with ${entries.length} entries');
@@ -180,6 +194,7 @@ EntryRangeInfo calculateEntryRangeInfo(List<Entry> entries) {
       availableYears: availableYears);
 }
 
+// determine whether backward navigation is allowed for a given view - prevents scrolling before the first recorded entry similar to the trends scroll
 bool canMoveBack(DateTime ref, String viewType, EntryRangeInfo info) {
   switch (viewType) {
     case 'Day':
@@ -198,6 +213,7 @@ bool canMoveBack(DateTime ref, String viewType, EntryRangeInfo info) {
   }
 }
 
+// high level helper used by aimetricsscreen - applies selected filter and return entries grouped by category
 Map<String, List<Entry>> getFilteredLabelEntries({
   required List<Entry> entries,
   required TimeFilter filter,

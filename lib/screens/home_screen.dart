@@ -1,4 +1,4 @@
-// home_screen.dart, default note input screen on app
+// home_screen.dart, default note input screen, central hub to the app
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,14 +22,19 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class HomeScreenState extends ConsumerState<HomeScreen> {
+  // controller for the main /today/ inputfield
   late TextEditingController controller;
+  // scroll controller for programmatic scrolling when expanding tiles
   final scrollController = ScrollController();
 
+  // track which date chip is expanded - index based sicn expansiontiles dont expose state directly
   int? expandedChipIndex;
 
+  // month visiblity map for expandable month sections
   final Map<String, bool> monthVisibility = {};
+  // key used to scroll expanded tiles into view
   final Map<String, GlobalKey> expansionTileKeys = {};
-
+  // year visibility map for older entries
   final Map<String, bool> yearVisibility = {};
 
   @override
@@ -49,12 +54,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // full date - entries map from provider
     final dateEntries = ref.watch(dateEntriesProvider);
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     final now = DateTime.now();
     final currentMonthKey = DateFormat('yyyy-MM').format(now);
 
+    // collect all past dates excluding today
     final allPreviousDates = dateEntries.keys
         .where((date) => date != todayDate)
         .toList()
@@ -72,18 +79,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       return monthKey != currentMonthKey;
     }).toList();
 
+    // group older dates by month yyyy-mm
     final Map<String, List<String>> groupedByMonth = {};
     for (final date in olderDates) {
       final dt = DateTime.parse(date);
       final monthKey = DateFormat('yyyy-MM').format(dt);
       groupedByMonth.putIfAbsent(monthKey, () => []).add(date);
     }
-    // for (var date in previousDates) {
-    //   final dt = DateTime.parse(date);
-    //   final monthKey = DateFormat('yyyy-MM').format(dt);
-    //   groupedByMonth.putIfAbsent(monthKey, () => []).add(date);
-    // }
 
+    // group months by year for deep nesting
     final Map<String, Map<String, List<String>>> groupedByYear = {};
 
     groupedByMonth.forEach((monthKey, dates) {
@@ -96,27 +100,18 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       groupedByYear[year]![month]!.addAll(dates);
     });
 
-    // groupedByMonth.forEach((monthKey, dates) {
-    //   final parts = monthKey.split('-'); // yyyy-MM
-    //   final year = parts[0];
-    //   final month = parts[1];
-
-    //   groupedByYear.putIfAbsent(year, () => {});
-    //   groupedByYear[year]!.putIfAbsent(month, () => []);
-    //   groupedByYear[year]![month]!.addAll(dates);
-    // });
-
-    final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
-
     return Scaffold(
       appBar: const CustomAppBar(),
       body: GestureDetector(
+        // dismiss keyboard when tapping otuside inputs
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
         child: ResponsiveScreen(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            // sliver based layout to support mixed scrolling content
             child: CustomScrollView(controller: scrollController, slivers: [
+              // today header + count badge
               SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -130,7 +125,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+              // main input for todays notes
               SliverToBoxAdapter(
                 child: TextField(
                   controller: controller,
@@ -156,7 +154,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+              // lsit of todays entries
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (BuildContext context, int index) {
@@ -165,11 +166,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   childCount: 1,
                 ),
               ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+              // previous days section - older entries for /currentmonth/ only
               const SliverToBoxAdapter(
                 child: Text("Previous Days", style: TextStyle(fontSize: 20)),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              // expandable chips for current month only
               HomeExpansionTiles(
                 groupedByMonth: {
                   currentMonthKey: currentMonthDates,
@@ -191,12 +196,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                 currentMonth: currentMonthKey,
                 ref: ref,
               ),
+
+              // older entries secction
               if (olderDates.isNotEmpty) ...[
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
                 const SliverToBoxAdapter(
                   child: Text("Older...", style: TextStyle(fontSize: 18)),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                // nested year - month - date expansion
                 OlderExpansionSliver(
                   groupedbyYear: groupedByYear,
                   dateEntries: dateEntries,
@@ -225,34 +233,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   isDark: isDark,
                 ),
               ],
-
-              // HomeExpansionTiles(
-              //     groupedByMonth: groupedByMonth,
-              //     dateEntries: dateEntries,
-              //     previousDates: previousDates,
-              //     monthVisibility: monthVisibility,
-              //     expandedChipIndex: expandedChipIndex,
-              //     onChipTap: (index) {
-              //       setState(() {
-              //         expandedChipIndex = index;
-              //       });
-              //     },
-              //     onDelete: (date) {
-              //       showDeleteConfirmationDialog(context, date, ref);
-              //     },
-              //     onMonthToggle: (monthKey) {
-              //       setState(() {
-              //         monthVisibility[monthKey] =
-              //             !(monthVisibility[monthKey] ?? false);
-              //       });
-              //     },
-              //     expansionTileKeys: expansionTileKeys,
-              //     currentMonth: currentMonth,
-              //     ref: ref)
             ]),
           ),
         ),
       ),
+      // fab to add new entries - keyboard enter performs the same action
       floatingActionButton: CustomFAB(
         onPressed: () {
           if (controller.text.trim().isNotEmpty) {

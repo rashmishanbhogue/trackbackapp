@@ -2,15 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import '../providers/date_entries_provider.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_fab.dart';
-import '../widgets/badges_svg.dart';
-import '../widgets/home_entries_list.dart';
-import '../widgets/older_expansion_chips.dart';
 import '../widgets/responsive_screen.dart';
-import '../models/entry.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -28,7 +22,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: const CustomAppBar(isProfile: true),
+      appBar: const CustomAppBar(),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),

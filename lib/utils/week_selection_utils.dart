@@ -2,8 +2,11 @@
 
 import 'package:flutter/material.dart';
 
+// start of the currently selected week (mon)
 DateTime? rangeStartDay;
+// end of the currently selected week (sun)
 DateTime? rangeEndDay;
+// last explicitly selected day (used by day/week filters)
 DateTime? selectedDay;
 
 // when a day is tapped, calculate the start and end of that week and store it
@@ -15,12 +18,14 @@ DateTime? selectedDay;
 //   return normalizedStart;
 // }
 
+// calculate and store the mon-sun range for a tapped date - return normalised mon start date
 DateTime updateWeekRange(DateTime selected) {
-  // treat Sunday (weekday == 7) as belonging to the previous mon - sun week
+  // treat sunday (weekday == 7) as belonging to the previous mon - sun week
   final adjustedSelected = selected.weekday == 7
       ? selected.subtract(const Duration(days: 6))
       : selected.subtract(Duration(days: selected.weekday - 1));
 
+  // normalise to midnight to avoid time comparison bugs
   final normalizedStart = DateTime(
       adjustedSelected.year, adjustedSelected.month, adjustedSelected.day);
   rangeStartDay = normalizedStart;
@@ -41,5 +46,6 @@ bool isInWeekRange(DateTime day) {
       DateTime(rangeStartDay!.year, rangeStartDay!.month, rangeStartDay!.day);
   final end = DateTime(rangeEndDay!.year, rangeEndDay!.month, rangeEndDay!.day);
 
-  return !d.isBefore(start) && !d.isAfter(end); // inclusive range
+  return !d.isBefore(start) &&
+      !d.isAfter(end); // inclusive date only range comparison
 }

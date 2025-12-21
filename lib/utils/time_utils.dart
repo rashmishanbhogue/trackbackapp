@@ -1,4 +1,4 @@
-// time_utils.dart
+// time_utils.dart, to define time blocks for the time of day distribution
 
 String getTimeOfDayBlock(DateTime timestamp) {
   final hour = timestamp.hour;

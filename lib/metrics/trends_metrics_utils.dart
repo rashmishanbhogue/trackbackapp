@@ -1,18 +1,22 @@
-// dashboard_metrics_utils.dart, to handle the logic for metrics and badge calculations
+// trends_metrics_utils.dart, to handle the logic for metrics and badge calculations
 
 import 'package:intl/intl.dart';
-import '../metrics/dashboard_charts.dart';
+import 'trends_charts.dart';
 import '../utils/time_utils.dart';
 import '../models/entry.dart';
 
+// calculate time of day distribution and filtered entries
+// used by ttrends screen when metrics are computed on main isolate
 Future<Map<String, dynamic>> calculateMetrics(
   List<Entry> allEntries,
   String viewType, {
   DateTime? selectedDate,
 }) async {
+  // filte rentries based on active time resolution
   final filteredEntries =
       filterEntriesByViewType(allEntries, viewType, selectedDate: selectedDate);
 
+  // initialise buckets fro time of day analysis
   Map<String, int> timeOfDayCounts = {
     'Morning': 0,
     'Afternoon': 0,
@@ -20,30 +24,36 @@ Future<Map<String, dynamic>> calculateMetrics(
     'Night': 0,
   };
 
+  // classify each entry into a time block
   for (final entry in filteredEntries) {
     final block = getTimeOfDayBlock(entry.timestamp);
     timeOfDayCounts[block] = (timeOfDayCounts[block] ?? 0) + 1;
   }
 
+  // raw data return instead of ui ready models, allows caller to decide how to visualise
   return {
     'times': timeOfDayCounts,
     'entries': filteredEntries,
   };
 }
 
+// build a badge count map grouped by logical periods for pie chart distribution
 Map<String, int> buildBadgeCountMap(
   List<Entry> entries,
   String viewType, {
   DateTime? selectedDate,
 }) {
+  // defensive filtering to match chart logic
   final filteredEntries =
       filterEntriesByViewType(entries, viewType, selectedDate: selectedDate);
 
+  // group entries by period key (day/week/month/year)
   Map<String, List<Entry>> groupedEntries = {};
 
   for (var entry in filteredEntries) {
     String key;
 
+    // determine grouping granularity based on view
     switch (viewType) {
       case 'Day':
         key = DateFormat('yyyy-MM-dd').format(entry.timestamp);
@@ -67,6 +77,7 @@ Map<String, int> buildBadgeCountMap(
     groupedEntries.putIfAbsent(key, () => []).add(entry);
   }
 
+  // convert grouped entry counts into badge distribution
   Map<String, int> badgeCountMap = {};
 
   for (var group in groupedEntries.values) {
@@ -78,11 +89,13 @@ Map<String, int> buildBadgeCountMap(
   return badgeCountMap;
 }
 
+// calculate badge counts withall badge categories preinitialised to avoid missing keys in ui rendering
 Map<String, int> calculateBadgeCount(
   List<Entry> entries,
   String viewType, {
   DateTime? selectedDate,
 }) {
+  // initialise all badge buckets to ensure stable legend order
   Map<String, int> badgeCountMap = {
     'Yellow': 0,
     'Green': 0,
@@ -94,14 +107,17 @@ Map<String, int> calculateBadgeCount(
 
   final filteredEntries =
       filterEntriesByViewType(entries, viewType, selectedDate: selectedDate);
+  // short circuit if no data
   if (filteredEntries.isEmpty) return badgeCountMap;
 
+  // group entries by day first - badge threasholds are day based, not entry based
   Map<String, List<Entry>> entriesGroupedByDay = {};
   for (final entry in filteredEntries) {
     final dayKey = DateFormat('yyyy-MM-dd').format(entry.timestamp);
     entriesGroupedByDay.putIfAbsent(dayKey, () => []).add(entry);
   }
 
+  // calculate badge per group
   for (final group in entriesGroupedByDay.values) {
     final count = group.length;
     final badge = getBadgeForEntries(count);
@@ -111,6 +127,7 @@ Map<String, int> calculateBadgeCount(
   return badgeCountMap;
 }
 
+// utility to find earliest entry date - to clamp navigation bounds in trends screen
 DateTime getFirstEntryDate(List<Entry> allEntries) {
   if (allEntries.isEmpty) return DateTime.now();
   return allEntries
@@ -130,12 +147,13 @@ Map<String, dynamic> computeMetricsForAllViews(Map<String, dynamic> args) {
       ? DateTime.parse(selectedDateIso)
       : DateTime.now();
 
-  // reconstruct DateTime list
+  // reconstruct DateTime list inside isolate
   final dates = timeStampStrings.map((s) => DateTime.parse(s)).toList();
 
   final Map<String, dynamic> result = {};
 
   for (final view in viewTypes) {
+    // filter dates based on view granularity
     final filtered =
         filterDatesByViewType(dates, view, selectedDate: selectedDate);
 
@@ -155,7 +173,7 @@ Map<String, dynamic> computeMetricsForAllViews(Map<String, dynamic> args) {
     final badgeCountMap = calculateBadgeCountFromDates(filtered, view,
         selectedDate: selectedDate);
 
-    // entries -> return only ISO timestamps (serializable)
+    // entries - return only ISO timestamps (serialisable)
     final entriesIso = filtered.map((d) => d.toIso8601String()).toList();
     result[view] = {
       'times': timeOfDayCounts,
@@ -167,13 +185,14 @@ Map<String, dynamic> computeMetricsForAllViews(Map<String, dynamic> args) {
   return result;
 }
 
+// helper for computing a single view via the shared multi view function
 Map<String, dynamic> computeMetricsForSingleView(Map<String, dynamic> args) {
   args['viewTypes'] = [args['viewType'] as String];
   final all = computeMetricsForAllViews(args);
   return all[args['viewType']] as Map<String, dynamic>;
 }
 
-// lazy: filter dates by view type (isolate-friendly)
+// lazy - filter dates by view type (isolate-friendly), mirrors filterEntriesByViewType but oeprates on DateTime only
 List<DateTime> filterDatesByViewType(List<DateTime> dates, String viewType,
     {DateTime? selectedDate}) {
   final now = selectedDate ?? DateTime.now();
@@ -214,7 +233,7 @@ List<DateTime> filterDatesByViewType(List<DateTime> dates, String viewType,
   return filtered;
 }
 
-// lazy: compute badge counts from a list of timestamps (isolate-friendly)
+// lazy - compute badge counts from a list of timestamps (isolate-friendly), mirrors calculateBadgeCount but without Entry objects
 Map<String, int> calculateBadgeCountFromDates(
     List<DateTime> dates, String viewType,
     {DateTime? selectedDate}) {
@@ -243,6 +262,7 @@ Map<String, int> calculateBadgeCountFromDates(
     grouped.putIfAbsent(key, () => []).add(dt);
   }
 
+  // pre intiliase all badge cateogries
   Map<String, int> badgeCountMap = {
     'Yellow': 0,
     'Green': 0,
