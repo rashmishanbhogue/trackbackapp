@@ -22,25 +22,24 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: const CustomAppBar(),
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: ResponsiveScreen(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: CustomScrollView(
-            ),
-      floatingActionButton: CustomFAB(
-        onPressed: () {
-          if (controller.text.trim().isNotEmpty) {
-            controller.clear();
-            FocusScope.of(context).unfocus();
-          }
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(Icons.add, size: 30),
-      ),
-    );
+        appBar: const CustomAppBar(),
+        floatingActionButton: CustomFAB(
+          onPressed: () {
+            if (controller.text.trim().isNotEmpty) {
+              controller.clear();
+              FocusScope.of(context).unfocus();
+            }
+          },
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: const Icon(Icons.add, size: 30),
+        ),
+        body: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: const ResponsiveScreen(
+                child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: CustomScrollView(),
+            ))));
   }
 }
