@@ -1,4 +1,4 @@
-// ideas_screen.dart, for raw ideas capture dump
+// ideas_dump_screen.dart, for raw ideas capture dump
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -156,15 +156,6 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
       // fab to open a new blank idea card in create mode
       floatingActionButton: CustomFAB(
         onPressed: () {
-          // final idea = IdeaItem(
-          //     id: DateTime.now().millisecondsSinceEpoch.toString(),
-          //     text: '',
-          //     colorValue: 0xFFFFF1B8,
-          //     createdAt: DateTime.now(),
-          //     updatedAt: DateTime.now());
-
-          // ref.read(ideasDumpProvider.notifier).addIdea(idea);
-
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const IdeaCards()),
           );
