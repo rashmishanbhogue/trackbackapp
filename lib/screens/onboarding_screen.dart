@@ -138,9 +138,23 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                                   ),
                                   child: AspectRatio(
                                     aspectRatio: 9 / 16, // phone screen ratio
-                                    child: Image.asset(
-                                      page.imageAsset,
-                                      fit: BoxFit.contain,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                              color: theme.dividerColor,
+                                              width: 1),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                                color: Colors.black12,
+                                                blurRadius: 12,
+                                                offset: Offset(0, 6))
+                                          ]),
+                                      child: Image.asset(
+                                        page.imageAsset,
+                                        fit: BoxFit.contain,
+                                      ),
                                     ),
                                   ),
                                 ),
