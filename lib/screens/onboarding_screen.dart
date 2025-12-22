@@ -22,6 +22,22 @@ class OnboardingScreenState extends State<OnboardingScreen> {
   // delay content rendering until logo settles
   bool showContent = false;
 
+  // palceholder dummies
+  final List<OnboardingPageData> pages = const [
+    OnboardingPageData(
+        title: 'Track what you did,',
+        subtitle: 'not what you failed to do.',
+        imageAsset: 'assets/images/onboarding1.png'),
+    OnboardingPageData(
+        title: 'Get it out of your head,',
+        subtitle: 'without turning it into a task.',
+        imageAsset: 'assets/images/onboarding2.png'),
+    OnboardingPageData(
+        title: 'Notice patterns,',
+        subtitle: 'no judgement, just insight.',
+        imageAsset: 'assets/images/onboarding3.png'),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -38,13 +54,6 @@ class OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => showContent = true);
     });
   }
-
-  // palceholder dummies
-  final List<String> pages = [
-    'Capture your thoughts.',
-    'Reflect on your patterns.',
-    'Understand yourself better.'
-  ];
 
   void goNext() {
     if (currentPage < pages.length - 1) {
@@ -73,11 +82,13 @@ class OnboardingScreenState extends State<OnboardingScreen> {
 
     return Scaffold(
       body: SafeArea(
-          child: Stack(
+          child: Column(
         children: [
           // hero shared with splash
-          AnimatedAlign(
-            alignment: moveUp ? const Alignment(0, -0.8) : Alignment.center,
+          AnimatedPadding(
+            padding: EdgeInsets.only(
+              top: moveUp ? 16 : MediaQuery.of(context).size.height * 0.35,
+            ),
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeInOut,
             child: const Hero(
@@ -95,33 +106,64 @@ class OnboardingScreenState extends State<OnboardingScreen> {
           ),
 
           // onboarding content
-          Positioned.fill(
+          Expanded(
             child: AnimatedOpacity(
               opacity: showContent ? 1 : 0,
               duration: const Duration(milliseconds: 900),
               curve: Curves.easeIn,
               child: Column(
                 children: [
-                  const SizedBox(height: 96), // space for logo animation
-
                   // swipable pages
                   Expanded(
                     child: PageView.builder(
-                      controller: controller,
-                      itemCount: pages.length,
-                      onPageChanged: (index) {
-                        setState(() => currentPage = index);
-                      },
-                      itemBuilder: (_, index) {
-                        return Center(
-                          child: Text(
-                            pages[index],
-                            style: theme.textTheme.headlineSmall,
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
-                    ),
+                        controller: controller,
+                        itemCount: pages.length,
+                        onPageChanged: (index) {
+                          setState(() => currentPage = index);
+                        },
+                        itemBuilder: (_, index) {
+                          final page = pages[index];
+
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 24),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight:
+                                        MediaQuery.of(context).size.height *
+                                            0.55,
+                                  ),
+                                  child: AspectRatio(
+                                    aspectRatio: 9 / 16, // phone screen ratio
+                                    child: Image.asset(
+                                      page.imageAsset,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              Text(
+                                page.title,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.greyDark),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                page.subtitle,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.greyDark),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        }),
                   ),
 
                   // arrow navigation
@@ -154,11 +196,37 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                             children: [
                               IconButton(
                                 onPressed: currentPage == 0 ? null : goBack,
-                                icon: const Icon(Icons.arrow_back),
+                                icon: InkWell(
+                                    child: Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: currentPage == 0
+                                              ? AppTheme.idleDarkest
+                                              : theme.colorScheme.primary,
+                                        ),
+                                        child: Icon(
+                                          Icons.arrow_back,
+                                          color: currentPage == 0
+                                              ? AppTheme.iconDisabledDark
+                                              : Colors.white,
+                                        ))),
                               ),
                               IconButton(
                                 onPressed: goNext,
-                                icon: const Icon(Icons.arrow_forward),
+                                icon: InkWell(
+                                  child: Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: theme.colorScheme.primary),
+                                      child: const Icon(
+                                        Icons.arrow_forward,
+                                        color: Colors.white,
+                                      )),
+                                ),
                               ),
                             ],
                           ),
@@ -171,4 +239,16 @@ class OnboardingScreenState extends State<OnboardingScreen> {
       )),
     );
   }
+}
+
+class OnboardingPageData {
+  final String title;
+  final String subtitle;
+  final String imageAsset; // placeholder for screenshots
+
+  const OnboardingPageData({
+    required this.title,
+    required this.subtitle,
+    required this.imageAsset,
+  });
 }
