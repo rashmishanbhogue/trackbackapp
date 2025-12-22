@@ -104,10 +104,26 @@ class IdeasDumpNotifier extends StateNotifier<List<IdeaItem>> {
   }
 
   void updateIdea(IdeaItem idea) {
-    // overwrite existing idea data without changing order
-    box.put(idea.id, jsonEncode(idea.toJson()));
-    // replace in state list
-    state = [for (final i in state) i.id == idea.id ? idea : i];
+    // existing idea updates should change its order and shift the card to order:0
+    // remove the existing item
+    final remaining = state.where((i) => i.id != idea.id).toList();
+
+    // shift others down
+    final shifted = [for (final i in remaining) i.copyWith(order: i.order + 1)];
+
+    // edited idea gpes to top left
+    final updatedIdea = idea.copyWith(order: 0, updatedAt: DateTime.now());
+
+    // persist edited idea
+    box.put(updatedIdea.id, jsonEncode(updatedIdea.toJson()));
+
+    // persist shifted ideas
+    for (final i in shifted) {
+      box.put(i.id, jsonEncode(i.toJson()));
+    }
+
+    // update state
+    state = [updatedIdea, ...shifted];
   }
 
   void removeIdea(String id) {

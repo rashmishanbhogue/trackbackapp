@@ -7,7 +7,7 @@ import '../theme.dart';
 
 // show a confirmation dilaog before deleting all entries for a given date
 // widgetref is passed instead of context lookup - deletion logic stays provider driven. dialog remains stateless and reusable
-Future<bool?> showDeleteConfirmationDialog(
+Future<bool?> showHomeDeleteDialog(
     BuildContext context, String date, WidgetRef ref) {
   return showDialog<bool>(
     context: context,
@@ -15,11 +15,14 @@ Future<bool?> showDeleteConfirmationDialog(
       return AlertDialog(
         title: const Text(
           'Delete Entries?',
-          style: TextStyle(fontSize: 18),
+          style: TextStyle(
+              fontSize: 18,
+              color: AppTheme.greyDark,
+              fontWeight: FontWeight.w500),
         ),
         content: const Text(
           'Are you sure you want to delete all entries for this date?',
-          style: TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: 16, color: AppTheme.greyDark),
         ),
         actions: [
           // destructive action

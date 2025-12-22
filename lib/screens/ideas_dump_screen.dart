@@ -277,39 +277,125 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
             color: Color(idea.colorValue),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // optional title
-              if (hasTitle) ...[
-                Text(
-                  idea.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.greyDark,
+          child: Stack(clipBehavior: Clip.none, children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // optional title
+                  if (hasTitle) ...[
+                    Text(
+                      idea.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.greyDark,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  // body expands more if title doesnt exist
+                  Text(
+                    idea.text,
+                    maxLines: hasTitle ? 4 : 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                      color: AppTheme.greyDark,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-              ],
-              // body expands more if title doesnt exist
-              Text(
-                idea.text,
-                maxLines: hasTitle ? 4 : 6,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.normal,
-                  color: AppTheme.greyDark,
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: -16,
+              right: -18,
+              child: PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadiusGeometry.circular(12)),
+                  icon: const InkWell(
+                    child: Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: AppTheme.iconDefaultLight,
+                    ),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      showIdeasDeleteDialog(context, idea.id, ref);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'delete',
+                          height: 36,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Text(
+                              'Delete',
+                              style: TextStyle(color: AppTheme.greyDark),
+                            ),
+                          ),
+                        ),
+                      ]),
+            )
+          ]),
         ),
       ),
     );
+  }
+
+  Future<bool?> showIdeasDeleteDialog(
+      BuildContext context, String id, WidgetRef ref) {
+    return showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text(
+              'Delete Idea?',
+              style: TextStyle(
+                  fontSize: 18,
+                  color: AppTheme.greyDark,
+                  fontWeight: FontWeight.w500),
+            ),
+            content: const Text(
+              'Are you sure you want to delete this idea card and its contents?',
+              style: TextStyle(fontSize: 16, color: AppTheme.greyDark),
+            ),
+            actions: [
+              // destructive action
+              TextButton(
+                  onPressed: () {
+                    // delete the idea from provider and hive
+                    ref.read(ideasDumpProvider.notifier).removeIdea(id);
+                    // return confirmation result to caller
+                    Navigator.of(context).pop();
+                  },
+                  style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.iconDeleteContent),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  )),
+              // non destructive cancel action
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ))
+            ],
+          );
+        });
   }
 }

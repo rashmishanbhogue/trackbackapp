@@ -188,7 +188,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   });
                 },
                 onDelete: (date) {
-                  showDeleteConfirmationDialog(context, date, ref);
+                  showHomeDeleteDialog(context, date, ref);
                 },
                 onMonthToggle: (_) {}, // not used for current month
                 expansionTileKeys: expansionTileKeys,

@@ -124,7 +124,7 @@ class HomeExpansionTiles extends StatelessWidget {
                 // colorindex derived from position - visual consistency without storing color state
                 colorIndex: index,
                 confirmDismiss: (direction) async {
-                  return await showDeleteConfirmationDialog(
+                  return await showHomeDeleteDialog(
                     context,
                     date,
                     ref,

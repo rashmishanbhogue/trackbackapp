@@ -238,7 +238,7 @@ class OlderExpansionSliver extends StatelessWidget {
                     expandedDate, () => GlobalKey()),
                 colorIndex: expandedDate.hashCode,
                 confirmDismiss: (direction) async {
-                  return await showDeleteConfirmationDialog(
+                  return await showHomeDeleteDialog(
                     context,
                     expandedDate,
                     ref,
