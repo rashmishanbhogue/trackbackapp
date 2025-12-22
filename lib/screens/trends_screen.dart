@@ -127,6 +127,7 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
       });
     });
     updateReferenceDate();
+    startBackgroundLoad(); // week, month and year dont display timeofday otherwise
   }
 
   // normalise referencedate based on viewtype
@@ -163,6 +164,7 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
         referenceDate = DateTime(referenceDate.year + direction);
       }
     });
+    startBackgroundLoad(); // try
   }
 
   // user facing label for the current reference window
@@ -340,24 +342,38 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
           : null,
       body: hasData
           ? Builder(builder: (context) {
-              // day sync entries
-              final todayKey = DateFormat('yyyy-MM-dd').format(referenceDate);
-              final List<Entry> todayEntries = dateEntries[todayKey] ?? [];
+              // day view computes synchronously from dateentries for accuracy
+              // non day views read from metricsCacheByView precomputed via computeMetricsForallViews() using the same logic but over filtered ranges
+              Map<String, int> metricsTimes;
 
-              // day timestamps for chart
-              final List<DateTime> todayTimestamps =
-                  todayEntries.map((e) => e.timestamp).toList();
+              if (viewType == 'Day') {
+                final todayKey = DateFormat('yyyy-MM-dd').format(referenceDate);
+                final todayEntries = dateEntries[todayKey] ?? [];
 
-              // counts for time-of-day distribution
-              final metricsTimes = {
-                'Morning': 0,
-                'Afternoon': 0,
-                'Evening': 0,
-                'Night': 0
-              };
-              for (final ts in todayTimestamps) {
-                final block = getTimeOfDayBlock(ts);
-                metricsTimes[block] = (metricsTimes[block] ?? 0) + 1;
+                metricsTimes = {
+                  'Morning': 0,
+                  'Afternoon': 0,
+                  'Evening': 0,
+                  'Night': 0,
+                };
+
+                for (final entry in todayEntries) {
+                  final block = getTimeOfDayBlock(entry.timestamp);
+                  metricsTimes[block] = (metricsTimes[block] ?? 0) + 1;
+                }
+              } else {
+                // week/month/year timeofday must come from background computed cache
+                // fallback to zeroed buckets to keep uis table duirng hydration
+                final cached = metricsCacheByView?[viewType];
+
+                metricsTimes = cached != null && cached['times'] != null
+                    ? Map<String, int>.from(cached['times'])
+                    : {
+                        'Morning': 0,
+                        'Afternoon': 0,
+                        'Evening': 0,
+                        'Night': 0,
+                      };
               }
 
               return ResponsiveScreen(
