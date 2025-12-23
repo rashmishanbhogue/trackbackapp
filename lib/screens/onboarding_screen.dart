@@ -181,69 +181,72 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                   ),
 
                   // arrow navigation
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 24),
-                    child: isLastPage
-                        ? Column(
-                            children: [
-                              // placeholder auth actions - dummies for now
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: completeOnboarding,
-                                  child: const Text('Sign in with Google'),
+                  SizedBox(
+                    height: 156,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 24),
+                      child: isLastPage
+                          ? Column(
+                              children: [
+                                // placeholder auth actions - dummies for now
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: completeOnboarding,
+                                    child: const Text('Sign in with Google'),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: completeOnboarding,
-                                  child: const Text('Sign in with Apple'),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton(
+                                    onPressed: completeOnboarding,
+                                    child: const Text('Sign in with Apple'),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                onPressed: currentPage == 0 ? null : goBack,
-                                icon: InkWell(
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  onPressed: currentPage == 0 ? null : goBack,
+                                  icon: InkWell(
+                                      child: Container(
+                                          width: 48,
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: currentPage == 0
+                                                ? AppTheme.idleDarkest
+                                                : theme.colorScheme.primary,
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_back,
+                                            color: currentPage == 0
+                                                ? AppTheme.iconDisabledDark
+                                                : Colors.white,
+                                          ))),
+                                ),
+                                IconButton(
+                                  onPressed: goNext,
+                                  icon: InkWell(
                                     child: Container(
                                         width: 48,
                                         height: 48,
                                         decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: currentPage == 0
-                                              ? AppTheme.idleDarkest
-                                              : theme.colorScheme.primary,
-                                        ),
-                                        child: Icon(
-                                          Icons.arrow_back,
-                                          color: currentPage == 0
-                                              ? AppTheme.iconDisabledDark
-                                              : Colors.white,
-                                        ))),
-                              ),
-                              IconButton(
-                                onPressed: goNext,
-                                icon: InkWell(
-                                  child: Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: theme.colorScheme.primary),
-                                      child: const Icon(
-                                        Icons.arrow_forward,
-                                        color: Colors.white,
-                                      )),
+                                            shape: BoxShape.circle,
+                                            color: theme.colorScheme.primary),
+                                        child: const Icon(
+                                          Icons.arrow_forward,
+                                          color: Colors.white,
+                                        )),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                    ),
                   ),
                 ],
               ),

@@ -9,7 +9,6 @@ import '../utils/hive_utils.dart';
 import '../utils/time_utils.dart';
 import '../providers/date_entries_provider.dart';
 import '../widgets/custom_appbar.dart';
-import '../widgets/custom_fab.dart';
 import '../widgets/responsive_screen.dart';
 import '../metrics/trends_metrics_utils.dart';
 import '../metrics/trends_charts.dart';
@@ -330,16 +329,6 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
 
     return Scaffold(
       appBar: const CustomAppBar(),
-      floatingActionButton: hasData
-          ? CustomFAB(
-              child: Icon(isBarChart ? Icons.pie_chart : Icons.bar_chart),
-              onPressed: () {
-                setState(() {
-                  isBarChart = !isBarChart;
-                });
-              },
-            )
-          : null,
       body: hasData
           ? Builder(builder: (context) {
               // day view computes synchronously from dateentries for accuracy
@@ -377,231 +366,266 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
               }
 
               return ResponsiveScreen(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // title + info button
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            isBarChart
-                                ? 'Entries Trend:'
-                                : 'Badge Distribution:',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => showBadgeLegend(context),
-                            icon: const Icon(Icons.info_outline),
-                            tooltip: 'View Badge Details',
-                            color: AppTheme.iconDefaultLight,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // container holding the tab section and its content
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Column(children: [
-                            // tabbar for day/week/month/year
-                            TabBar(
-                              controller: tabController,
-                              onTap: (index) {
-                                final now = DateTime.now();
-                                setState(() {
-                                  if (index == 0) {
-                                    viewType = 'Day';
-                                    referenceDate =
-                                        DateTime(now.year, now.month, now.day);
-                                  } else if (index == 1) {
-                                    viewType = 'Week';
-                                    referenceDate = now.subtract(
-                                        Duration(days: now.weekday - 1));
-                                  } else if (index == 2) {
-                                    viewType = 'Month';
-                                    referenceDate =
-                                        DateTime(now.year, now.month);
-                                  } else if (index == 3) {
-                                    viewType = 'Year';
-                                    referenceDate = DateTime(now.year);
-                                  }
-                                });
-                              },
-                              dividerColor: Colors.transparent,
-                              indicatorColor: Colors.transparent,
-                              indicator: UnderlineTabIndicator(
-                                borderSide:
-                                    BorderSide(color: selectedColor, width: 3),
-                              ),
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              labelColor: selectedColor,
-                              unselectedLabelColor: unselectedColor,
-                              labelStyle: const TextStyle(
-                                fontFamily: 'SF Pro',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                height: 1.42,
-                                letterSpacing: 0.1,
-                              ),
-                              labelPadding:
-                                  const EdgeInsets.symmetric(vertical: 6),
-                              tabs: const [
-                                Tab(text: 'Day'),
-                                Tab(text: 'Week'),
-                                Tab(text: 'Month'),
-                                Tab(text: 'Year'),
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // title + graph toggle + info button
+                            // flexible title
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    isBarChart
+                                        ? 'Entries Trend:'
+                                        : 'Badge Distribution:',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // fixed position icons
+                                IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        isBarChart = !isBarChart;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      isBarChart
+                                          ? Icons.pie_chart
+                                          : Icons.bar_chart,
+                                      color: AppTheme.weekHighlightLight,
+                                    ),
+                                    tooltip: 'Change graph',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints()),
+                                IconButton(
+                                  onPressed: () => showBadgeLegend(context),
+                                  icon: const Icon(Icons.info_outline),
+                                  tooltip: 'View Badge Details',
+                                  color: AppTheme.iconDefaultLight,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                )
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            // chevrons + display text
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  onPressed: canMoveBack()
-                                      ? () => moveReferenceDate(-1)
-                                      : null,
-                                  icon: const Icon(Icons.chevron_left),
-                                ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      getDisplayText(),
+
+                            const SizedBox(height: 20),
+
+                            // container holding the tab section and its content
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0),
+                                child: Column(children: [
+                                  // tabbar for day/week/month/year
+                                  TabBar(
+                                    controller: tabController,
+                                    onTap: (index) {
+                                      final now = DateTime.now();
+                                      setState(() {
+                                        if (index == 0) {
+                                          viewType = 'Day';
+                                          referenceDate = DateTime(
+                                              now.year, now.month, now.day);
+                                        } else if (index == 1) {
+                                          viewType = 'Week';
+                                          referenceDate = now.subtract(
+                                              Duration(days: now.weekday - 1));
+                                        } else if (index == 2) {
+                                          viewType = 'Month';
+                                          referenceDate =
+                                              DateTime(now.year, now.month);
+                                        } else if (index == 3) {
+                                          viewType = 'Year';
+                                          referenceDate = DateTime(now.year);
+                                        }
+                                      });
+                                    },
+                                    dividerColor: Colors.transparent,
+                                    indicatorColor: Colors.transparent,
+                                    indicator: UnderlineTabIndicator(
+                                      borderSide: BorderSide(
+                                          color: selectedColor, width: 3),
+                                    ),
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    labelColor: selectedColor,
+                                    unselectedLabelColor: unselectedColor,
+                                    labelStyle: const TextStyle(
+                                      fontFamily: 'SF Pro',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.42,
+                                      letterSpacing: 0.1,
+                                    ),
+                                    labelPadding:
+                                        const EdgeInsets.symmetric(vertical: 6),
+                                    tabs: const [
+                                      Tab(text: 'Day'),
+                                      Tab(text: 'Week'),
+                                      Tab(text: 'Month'),
+                                      Tab(text: 'Year'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // chevrons + display text
+                                  Row(
+                                    children: [
+                                      // fixed left chevron
+                                      IconButton(
+                                        onPressed: canMoveBack()
+                                            ? () => moveReferenceDate(-1)
+                                            : null,
+                                        icon: const Icon(Icons.chevron_left),
+                                      ),
+                                      const SizedBox(width: 32),
+
+                                      // centered text
+                                      Expanded(
+                                        child: Center(
+                                          child: Text(
+                                            getDisplayText(),
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: selectedColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // calendar icon (fixed slot)
+                                      const SizedBox(width: 8),
+                                      SizedBox(
+                                        width: 32, // fixed width
+                                        child: !isOnTodayAnchor()
+                                            ? IconButton(
+                                                onPressed: () =>
+                                                    jumpToToday(DateTime.now()),
+                                                icon: Icon(
+                                                  Icons.calendar_today,
+                                                  size: 16,
+                                                  color: selectedColor,
+                                                ),
+                                                tooltip: 'Jump to today',
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                              )
+                                            : null,
+                                      ),
+
+                                      // fixed right chevron
+                                      IconButton(
+                                        onPressed: canMoveForward()
+                                            ? () => moveReferenceDate(1)
+                                            : null,
+                                        icon: const Icon(Icons.chevron_right),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // bar graph or pie chart inside TabBarView
+                                  Expanded(
+                                    child: TabBarView(
+                                      controller: tabController,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      children: ['Day', 'Week', 'Month', 'Year']
+                                          .map((tabType) {
+                                        // filter entries for this tab
+                                        final allEntries = dateEntries.values
+                                            .expand((list) => list)
+                                            .toList();
+                                        final filteredEntries =
+                                            filterEntriesByViewType(
+                                          allEntries,
+                                          tabType,
+                                          selectedDate: referenceDate,
+                                        );
+
+                                        // badge counts for this tab
+                                        final badgeCountMap =
+                                            calculateBadgeCount(
+                                          filteredEntries,
+                                          tabType,
+                                          selectedDate: referenceDate,
+                                        );
+
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8),
+                                          child: SizedBox.expand(
+                                            child: isBarChart
+                                                ? buildBarChart(
+                                                    context,
+                                                    filteredEntries,
+                                                    tabType,
+                                                    referenceDate)
+                                                : buildPieChart(
+                                                    context,
+                                                    badgeCountMap,
+                                                    tabType,
+                                                    referenceDate),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Divider(height: 16),
+                                  const SizedBox(height: 16),
+
+                                  // time of day distribution
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Time of Day Distribution:',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: selectedColor,
                                       ),
                                     ),
-                                    if (!isOnTodayAnchor()) ...[
-                                      const SizedBox(width: 6),
-                                      IconButton(
-                                        onPressed: () =>
-                                            jumpToToday(DateTime.now()),
-                                        icon: Icon(
-                                          Icons.calendar_today,
-                                          size: 16,
-                                          color: selectedColor,
-                                        ),
-                                        tooltip: 'Jump to today',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                IconButton(
-                                  onPressed: canMoveForward()
-                                      ? () => moveReferenceDate(1)
-                                      : null,
-                                  icon: const Icon(Icons.chevron_right),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
+                                  ),
+                                  const SizedBox(height: 12),
 
-                            // bar graph or pie chart inside TabBarView
-                            Expanded(
-                              child: TabBarView(
-                                controller: tabController,
-                                physics: const NeverScrollableScrollPhysics(),
-                                children: ['Day', 'Week', 'Month', 'Year']
-                                    .map((tabType) {
-                                  // filter entries for this tab
-                                  final allEntries = dateEntries.values
-                                      .expand((list) => list)
-                                      .toList();
-                                  final filteredEntries =
-                                      filterEntriesByViewType(
-                                    allEntries,
-                                    tabType,
-                                    selectedDate: referenceDate,
-                                  );
-
-                                  // badge counts for this tab
-                                  final badgeCountMap = calculateBadgeCount(
-                                    filteredEntries,
-                                    tabType,
-                                    selectedDate: referenceDate,
-                                  );
-
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 8),
-                                    child: SizedBox.expand(
-                                      child: isBarChart
-                                          ? buildBarChart(
-                                              context,
-                                              filteredEntries,
-                                              tabType,
-                                              referenceDate)
-                                          : buildPieChart(
-                                              context,
-                                              badgeCountMap,
-                                              tabType,
-                                              referenceDate),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        'Morning',
+                                        'Afternoon',
+                                        'Evening',
+                                        'Night'
+                                      ].map((period) {
+                                        final count = metricsTimes[period] ?? 0;
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4),
+                                          child: Text(
+                                            '$period : $count',
+                                            style:
+                                                const TextStyle(fontSize: 16),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
-                                  );
-                                }).toList(),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ]),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Divider(height: 16),
-                            const SizedBox(height: 16),
-
-                            // time of day distribution
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Time of Day Distribution:',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  'Morning',
-                                  'Afternoon',
-                                  'Evening',
-                                  'Night'
-                                ].map((period) {
-                                  final count = metricsTimes[period] ?? 0;
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                    child: Text(
-                                      '$period : $count',
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ]),
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-              );
+                            )
+                          ])));
             })
           : const Center(
               child: Text('Add entries in Home to view the metrics.',
