@@ -26,6 +26,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   late TextEditingController controller;
   // scroll controller for programmatic scrolling when expanding tiles
   final scrollController = ScrollController();
+  // focusnode to track focus with FAB
+  final FocusNode inputFocusNode = FocusNode();
 
   // track which date chip is expanded - index based sicn expansiontiles dont expose state directly
   int? expandedChipIndex;
@@ -46,6 +48,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     controller.dispose();
+    inputFocusNode.dispose();
     super.dispose();
   }
 
@@ -131,6 +134,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               SliverToBoxAdapter(
                 child: TextField(
                   controller: controller,
+                  focusNode: inputFocusNode,
                   onSubmitted: (value) {
                     if (value.trim().isNotEmpty) {
                       ref.read(dateEntriesProvider.notifier).addEntry(
@@ -239,6 +243,12 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       // fab to add new entries - keyboard enter performs the same action
       floatingActionButton: CustomFAB(
         onPressed: () {
+          // if input is not focused, focus it and open the keyboard
+          if (!inputFocusNode.hasFocus) {
+            inputFocusNode.requestFocus();
+            return;
+          }
+          // if focused and text exists, submit it
           if (controller.text.trim().isNotEmpty) {
             ref.read(dateEntriesProvider.notifier).addEntry(
                   todayDate,
@@ -249,7 +259,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 );
             controller.clear();
-            FocusScope.of(context).unfocus();
+            inputFocusNode.unfocus();
           }
         },
         backgroundColor: Theme.of(context).colorScheme.primary,
