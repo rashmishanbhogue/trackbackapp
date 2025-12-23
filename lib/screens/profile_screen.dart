@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/custom_appbar.dart';
-import '../widgets/custom_fab.dart';
 import '../widgets/responsive_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -23,16 +22,6 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
         appBar: const CustomAppBar(),
-        floatingActionButton: CustomFAB(
-          onPressed: () {
-            if (controller.text.trim().isNotEmpty) {
-              controller.clear();
-              FocusScope.of(context).unfocus();
-            }
-          },
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: const Icon(Icons.add, size: 30),
-        ),
         body: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => FocusScope.of(context).unfocus(),
