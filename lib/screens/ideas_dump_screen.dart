@@ -153,16 +153,6 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
           ),
         ),
       ),
-      // fab to open a new blank idea card in create mode
-      floatingActionButton: CustomFAB(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const IdeaCards()),
-          );
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(Icons.add, size: 30),
-      ),
     );
   }
 
