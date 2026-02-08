@@ -4,15 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/date_entries_provider.dart';
+import '../providers/ideas_dump_provider.dart';
 import '../utils/home_dialog_utils.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_fab.dart';
 import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
 import '../widgets/home_entries_list.dart';
+import '../widgets/navbar.dart';
 import '../widgets/older_expansion_chips.dart';
 import '../widgets/responsive_screen.dart';
 import '../models/entry.dart';
+import '../models/idea_item.dart';
+import '../theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -21,7 +25,9 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => HomeScreenState();
 }
 
-class HomeScreenState extends ConsumerState<HomeScreen> {
+class HomeScreenState extends ConsumerState<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
+  // keep draft input across bottom-nav tab switches
   // controller for the main /today/ inputfield
   late TextEditingController controller;
   // scroll controller for programmatic scrolling when expanding tiles
@@ -40,9 +46,27 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   final Map<String, bool> yearVisibility = {};
 
   @override
+  bool get wantKeepAlive => true; // keep state alive when switching tabs
+
+  @override
   void initState() {
     super.initState();
     controller = TextEditingController();
+
+    controller.addListener(() {
+      setState(
+          () {}); // rebuild to keep FAB enabled/ disabled n sync with text input
+
+      final text = controller.text;
+
+      // multiline or long text input implies elaboration -> route to ideas flow
+      final isMultiline = text.contains('\n');
+      final isLong = text.length > 150;
+
+      if (isMultiline || isLong) {
+        // trigger expansion to ideas note editor
+      }
+    });
   }
 
   @override
@@ -54,8 +78,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // required for AutomaticKeepAliveClientMixin
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // enable FAB only upon textfield input
+    final hasText = controller.text.trim().isNotEmpty;
 
     // full date - entries map from provider
     final dateEntries = ref.watch(dateEntriesProvider);
@@ -131,29 +160,57 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
               // main input for todays notes
+              // lightweight capture - always visible, enter inserts newline, only FAB saves input
               SliverToBoxAdapter(
                 child: TextField(
+                  maxLines: null, // ideas note, enter -> newline
+                  minLines: 1, // done task
                   controller: controller,
                   focusNode: inputFocusNode,
-                  onSubmitted: (value) {
-                    if (value.trim().isNotEmpty) {
-                      ref.read(dateEntriesProvider.notifier).addEntry(
-                            todayDate,
-                            Entry(
-                              text: value.trim(),
-                              label: '',
-                              timestamp: DateTime.now(),
-                            ),
-                          );
-                      controller.clear();
-                      FocusScope.of(context).unfocus();
-                    }
-                  },
-                  decoration: const InputDecoration(
+                  keyboardType: TextInputType.multiline,
+                  textInputAction:
+                      TextInputAction.newline, // do not submit on enter
+                  decoration: InputDecoration(
                     hintText: 'Add a note...',
-                    border: OutlineInputBorder(
+                    border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                     ),
+                    suffixIconConstraints: const BoxConstraints(
+                      minWidth: 26,
+                      minHeight: 26,
+                    ),
+                    // clear input icon to clear draft input without submitting
+                    suffixIcon: hasText
+                        ? Padding(
+                            padding: const EdgeInsets.only(right: 10, left: 4),
+                            child: InkResponse(
+                              radius: 10,
+                              onTap: () {
+                                controller.clear();
+                              },
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    width: 0.8,
+                                    color: isDark
+                                        ? AppTheme.inputFillLight
+                                        : AppTheme.inputFillDark,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 11,
+                                  color: isDark
+                                      ? AppTheme.inputFillLight
+                                      : AppTheme.inputFillDark,
+                                ),
+                              ),
+                            ),
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -174,7 +231,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
               // previous days section - older entries for /currentmonth/ only
               const SliverToBoxAdapter(
-                child: Text("Previous Days", style: TextStyle(fontSize: 20)),
+                child:
+                    Text("Earlier this month", style: TextStyle(fontSize: 20)),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
               // expandable chips for current month only
@@ -240,28 +298,83 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-      // fab to add new entries - keyboard enter performs the same action
+      // fab saves only task-like input; ideas are handled elsewhere, enabled only if input exists in the textfield
       floatingActionButton: CustomFAB(
-        onPressed: () {
-          // if input is not focused, focus it and open the keyboard
-          if (!inputFocusNode.hasFocus) {
-            inputFocusNode.requestFocus();
-            return;
-          }
-          // if focused and text exists, submit it
-          if (controller.text.trim().isNotEmpty) {
-            ref.read(dateEntriesProvider.notifier).addEntry(
-                  todayDate,
-                  Entry(
-                    text: controller.text.trim(),
-                    label: '',
-                    timestamp: DateTime.now(),
-                  ),
-                );
-            controller.clear();
-            inputFocusNode.unfocus();
-          }
-        },
+        onPressed: hasText
+            ? () {
+                final text = controller.text.trim();
+
+                final isIdea = text.contains('\n') || text.length > 150;
+
+                // guard - ideas should not be saved to home
+                if (isIdea) {
+                  ref.read(ideasDumpProvider.notifier).addIdea(
+                      IdeaItem.newDraft(
+                          id: DateTime.now().microsecondsSinceEpoch.toString(),
+                          text: text,
+                          colorValue: AppTheme.ideaColors.first.toARGB32()));
+
+                  // reset home capture state after handoff
+                  controller.clear();
+                  inputFocusNode.unfocus();
+
+                  // snackbar with the message and an option to route to view it
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: isDark
+                          ? AppTheme.surfaceHighDark
+                          : AppTheme.surfaceHighLight,
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 4),
+                      content: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Saved to Ideas',
+                              style: TextStyle(
+                                color: isDark
+                                    ? AppTheme.textPrimaryDark
+                                    : AppTheme.textPrimaryLight,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              ref.read(navIndexProvider.notifier).state = 1;
+                              ScaffoldMessenger.of(context)
+                                  .hideCurrentSnackBar();
+                            },
+                            child: const Text(
+                              'View',
+                              style: TextStyle(
+                                color: Colors.orangeAccent,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Colors.orangeAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+
+                  return;
+                }
+
+                // home entry for done tasks in the primary hivebox
+                ref.read(dateEntriesProvider.notifier).addEntry(
+                      todayDate,
+                      Entry(
+                        text: controller.text.trim(),
+                        label: '',
+                        timestamp: DateTime.now(),
+                      ),
+                    );
+                controller.clear();
+                inputFocusNode.unfocus();
+              }
+            : null,
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, size: 30),
       ),

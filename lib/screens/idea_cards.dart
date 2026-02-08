@@ -7,8 +7,10 @@ import '../providers/ideas_dump_provider.dart';
 import '../theme.dart';
 
 class IdeaCards extends ConsumerStatefulWidget {
-  final IdeaItem? idea; // null = create, non-null = edit
-  const IdeaCards({super.key, this.idea});
+  final IdeaItem? idea; // edit existing
+  final String? initialText; // create from Home
+
+  const IdeaCards({super.key, this.idea, this.initialText});
 
   @override
   ConsumerState<IdeaCards> createState() => IdeaCardsState();
@@ -39,17 +41,18 @@ class IdeaCardsState extends ConsumerState<IdeaCards> {
     final idea = widget.idea;
 
     if (idea != null) {
+      // edit existing idea
       cardColor = Color(idea.colorValue);
       titleController.text = idea.title;
       bodyController.text = idea.text;
+    } else if (widget.initialText != null) {
+      // create from Home capture
+      bodyController.text = widget.initialText!;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.idea == null) {
-        titleFocus.requestFocus(); // new card
-      } else {
-        bodyFocus.requestFocus(); // edit existing
-      }
+      bodyFocus
+          .requestFocus(); // primary capture surface, focus here to support uninterrupted writing
     });
   }
 
