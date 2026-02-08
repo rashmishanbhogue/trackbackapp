@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class CustomFAB extends StatelessWidget {
   // tap handler passed from teh screen using the fab
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // nullable
   // flexible non harcoded icon
   final Widget child;
   final Color? backgroundColor;
@@ -18,12 +18,24 @@ class CustomFAB extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isEnabled = onPressed != null;
+
     return FloatingActionButton(
       // delegate iteraction logic to the caller
       onPressed: onPressed,
-      backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.primary,
-      // generic content
-      child: child,
+      backgroundColor: isEnabled
+          ? (backgroundColor ?? Theme.of(context).colorScheme.primary)
+          : theme.colorScheme.surfaceContainerHigh,
+      elevation: isEnabled ? 6 : 0,
+      child: IconTheme(
+        data: IconThemeData(
+            color: isEnabled
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.onSurface.withAlpha(97)),
+        // generic content
+        child: child,
+      ),
     );
   }
 }
