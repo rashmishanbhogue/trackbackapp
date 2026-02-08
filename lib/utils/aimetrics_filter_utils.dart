@@ -4,7 +4,7 @@ import '../utils/aimetrics_category_utils.dart';
 import '../utils/constants.dart';
 import '../utils/week_selection_utils.dart';
 import '../models/entry.dart';
-import '../screens/aimetrics_screen.dart';
+import '../screens/aimetrics_section.dart';
 
 // return all unique calendar days yyyy-mm-dd that have entries - used to enable/ disable selectable days in the day filter calendar
 List<DateTime> getAvailableDates(List<Entry> entries) {

@@ -1,4 +1,4 @@
-// ai_metrics_screen.dart, optional screen that uses ai and internet to show productivity metrics based on entries
+// ai_metrics_section.dart, optional section that uses ai and internet to show productivity metrics based on entries
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -15,23 +15,20 @@ import '../utils/date_week_utils.dart';
 import '../utils/aimetrics_category_utils.dart';
 import '../utils/aimetrics_filter_utils.dart';
 import '../utils/month_year_utils.dart';
-import '../widgets/custom_appbar.dart';
-import '../widgets/custom_fab.dart';
 import '../widgets/expandable_chips.dart';
-import '../widgets/responsive_screen.dart';
 import '../theme.dart';
 
 // supported time based filter for metrics
 enum TimeFilter { all, day, week, month, year }
 
-class AiMetricsScreen extends ConsumerStatefulWidget {
-  const AiMetricsScreen({super.key});
+class AiMetricsSection extends ConsumerStatefulWidget {
+  const AiMetricsSection({super.key});
 
   @override
-  ConsumerState<AiMetricsScreen> createState() => AiMetricsScreenState();
+  ConsumerState<AiMetricsSection> createState() => AiMetricsScreenState();
 }
 
-class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
+class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
   // store global entry availability across day/week/month/year
   // used to clamp calendars and disable invalid (empty) selections
   EntryRangeInfo entryRange = EntryRangeInfo(
@@ -325,81 +322,75 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('AiMetricsSection build');
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: const CustomAppBar(),
-      // refresh button doubles as progress indicator
-      floatingActionButton: CustomFAB(
-        child: isRefreshing
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? AppTheme.baseBlack : AppTheme.baseWhite,
-                  ),
-                ),
-              )
-            : const Icon(Icons.refresh),
-        onPressed: () async {
-          if (!isRefreshing) {
-            setState(() {
-              isRefreshing = true;
-            });
-            await clearStoredLabels();
-            await refreshMetrics();
-          }
-        },
-      ),
-      body: ResponsiveScreen(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 12),
-                const Text(
-                  'AI Categorised Labels:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                // timefilter chips
-                buildFilterChips(theme, isDark),
-                const SizedBox(height: 8),
-                // last updated indicator
-                Center(
-                  child: Text(
-                    lastUpdated != null
-                        ? 'Last updated: ${DateFormat('dd-MMM-yy, HH:mm').format(lastUpdated!)} hrs'
-                        : 'Last updated: Never. Add entries in Home and press Refresh button here.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // expansion category tiles
-                AiMetricsExpansionTiles(
-                  labelToEntries: labelToEntries,
-                  expandedCategory: expandedCategory,
-                  isRefreshing: isRefreshing,
-                  onTap: (category) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Text(
+            'AI Categorised Labels',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          TextButton.icon(
+            onPressed: isRefreshing
+                ? null
+                : () async {
                     setState(() {
-                      expandedCategory = category;
+                      isRefreshing = true;
                     });
+                    await clearStoredLabels();
+                    await refreshMetrics();
                   },
-                  isDark: isDark,
-                  categoryKeys: categoryKeys,
-                )
-              ],
+            icon: isRefreshing
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.refresh, size: 16),
+            label: const Text('Refresh'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(40, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
+        ]),
+        // timefilter chips
+        buildFilterChips(theme, isDark),
+        const SizedBox(height: 8),
+        // last updated indicator
+        Center(
+          child: Text(
+            lastUpdated != null
+                ? 'Last updated: ${DateFormat('dd-MMM-yy, HH:mm').format(lastUpdated!)} hrs'
+                : 'Last updated: Never. Add entries in Home and press Refresh button here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        // expansion category tiles
+        AiMetricsExpansionTiles(
+          labelToEntries: labelToEntries,
+          expandedCategory: expandedCategory,
+          isRefreshing: isRefreshing,
+          onTap: (category) {
+            setState(() {
+              expandedCategory = category;
+            });
+          },
+          isDark: isDark,
+          categoryKeys: categoryKeys,
+        )
+      ],
     );
   }
 

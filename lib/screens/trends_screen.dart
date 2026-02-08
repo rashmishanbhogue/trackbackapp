@@ -13,6 +13,7 @@ import '../widgets/responsive_screen.dart';
 import '../metrics/trends_metrics_utils.dart';
 import '../metrics/trends_charts.dart';
 import '../models/entry.dart';
+import '../screens/aimetrics_section.dart';
 import '../theme.dart';
 
 // ConsumerStatefulWidget for reactive access to dateEntriesProvider
@@ -420,10 +421,10 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
 
                             // container holding the tab section and its content
                             Expanded(
-                              child: Container(
+                              child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 16.0),
-                                child: Column(children: [
+                                child: ListView(children: [
                                   // tabbar for day/week/month/year
                                   TabBar(
                                     controller: tabController,
@@ -534,7 +535,8 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                   const SizedBox(height: 12),
 
                                   // bar graph or pie chart inside TabBarView
-                                  Expanded(
+                                  SizedBox(
+                                    height: 160,
                                     child: TabBarView(
                                       controller: tabController,
                                       physics:
@@ -582,7 +584,7 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                   ),
                                   const SizedBox(height: 16),
                                   const Divider(height: 16),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
 
                                   // time of day distribution
                                   const Align(
@@ -621,10 +623,13 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                       }).toList(),
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const Divider(height: 16),
+                                  const SizedBox(height: 12),
+                                  // const SizedBox(height: 16),
+                                  const AiMetricsSection(),
                                 ]),
                               ),
-                            )
+                            ),
                           ])));
             })
           : const Center(

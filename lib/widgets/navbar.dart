@@ -5,35 +5,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/trends_screen.dart';
 import '../screens/ideas_dump_screen.dart';
 import '../screens/home_screen.dart';
-import '../screens/aimetrics_screen.dart';
 import '../screens/profile_screen.dart';
 
-final navIndexProvider = StateProvider<int>((ref) => 2);
+// high level app destinations - ui states, not navigator routes
+enum ShellPage {
+  trends,
+  home,
+  you,
+  ideas, // logical page that reuses home tab selection
+}
+
+// single source of truth for which top-level page is visible
+final shellPageProvider = StateProvider<ShellPage>((ref) => ShellPage.home);
 
 class CustomNavBar extends ConsumerWidget {
-  // uses provider-driven tab index so other screens can switch tabs without pushing routes
+  // shell style navgiation to switch pages without pushing routes
   const CustomNavBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(navIndexProvider);
+    final page = ref.watch(shellPageProvider);
+
+    // resolve visible screen from shell state
+    Widget body;
+    switch (page) {
+      case ShellPage.trends:
+        body = const TrendsScreen();
+        break;
+      case ShellPage.home:
+        body = const HomeScreen();
+        break;
+      case ShellPage.you:
+        body = const ProfileScreen();
+        break;
+      case ShellPage.ideas:
+        body = const IdeasDumpScreen(); // idea is a full page, not a tab
+        break;
+    }
     return Scaffold(
       // preserve tab state (text, scroll, focus - esp home inputfield text) while switching tabs
-      body: IndexedStack(
-        index: currentIndex,
-        children: const [
-          TrendsScreen(),
-          IdeasDumpScreen(),
-          HomeScreen(),
-          AiMetricsScreen(),
-          ProfileScreen(),
-        ],
-      ),
-      // material3 navigation
+      body: body,
+
+      // bottom nav contains only 3 primary tabs, not all pages
       bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
+        selectedIndex: indexFromPage(page),
         onDestinationSelected: (index) {
-          ref.read(navIndexProvider.notifier).state = index;
+          ref.read(shellPageProvider.notifier).state = pageFromIndex(index);
         },
         destinations: const [
           NavigationDestination(
@@ -41,17 +58,9 @@ class CustomNavBar extends ConsumerWidget {
               selectedIcon: Icon(Icons.analytics),
               label: 'Trends'),
           NavigationDestination(
-              icon: Icon(Icons.lightbulb_outline),
-              selectedIcon: Icon(Icons.lightbulb),
-              label: 'Ideas'),
-          NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home),
               label: 'Home'),
-          NavigationDestination(
-              icon: Icon(Icons.assessment_outlined),
-              selectedIcon: Icon(Icons.assessment),
-              label: 'AI Metrics'),
           NavigationDestination(
               icon: Icon(Icons.account_circle_outlined),
               selectedIcon: Icon(Icons.account_circle),
@@ -60,5 +69,32 @@ class CustomNavBar extends ConsumerWidget {
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),
     );
+  }
+
+  // map shell pages to bpttom nav indices
+  int indexFromPage(ShellPage page) {
+    switch (page) {
+      case ShellPage.trends:
+        return 0;
+      case ShellPage.home:
+      case ShellPage.ideas: // idea lighlights to home tab
+        return 1;
+      case ShellPage.you:
+        return 2;
+    }
+  }
+
+  // map bottom nav taps back to shell pages
+  ShellPage pageFromIndex(int index) {
+    switch (index) {
+      case 0:
+        return ShellPage.trends;
+      case 1:
+        return ShellPage.home;
+      case 2:
+        return ShellPage.you;
+      default:
+        return ShellPage.home;
+    }
   }
 }

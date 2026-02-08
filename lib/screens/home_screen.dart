@@ -8,7 +8,7 @@ import '../providers/ideas_dump_provider.dart';
 import '../utils/home_dialog_utils.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_fab.dart';
-import '../widgets/badges_svg.dart';
+// import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
 import '../widgets/home_entries_list.dart';
 import '../widgets/navbar.dart';
@@ -142,7 +142,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             // sliver based layout to support mixed scrolling content
             child: CustomScrollView(controller: scrollController, slivers: [
-              // today header + count badge
+              // today header + ideas icon
               SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -151,7 +151,16 @@ class HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       const Text("Today", style: TextStyle(fontSize: 24)),
                       const Spacer(),
-                      buildBadge(dateEntries[todayDate]?.length ?? 0),
+                      // buildBadge(dateEntries[todayDate]?.length ?? 0),
+                      IconButton(
+                          icon: const Icon(Icons.lightbulb,
+                              size: 26, color: Colors.orangeAccent),
+                          tooltip: 'Ideas',
+                          onPressed: () {
+                            // go to ideas via shell state - keeps bottom nav and avoids back stack
+                            ref.read(shellPageProvider.notifier).state =
+                                ShellPage.ideas;
+                          })
                     ],
                   ),
                 ),
@@ -340,7 +349,8 @@ class HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           GestureDetector(
                             onTap: () {
-                              ref.read(navIndexProvider.notifier).state = 1;
+                              ref.read(shellPageProvider.notifier).state =
+                                  ShellPage.ideas;
                               ScaffoldMessenger.of(context)
                                   .hideCurrentSnackBar();
                             },
