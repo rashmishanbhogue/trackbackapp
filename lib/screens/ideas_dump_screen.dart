@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:trackbackapp/models/idea_item.dart';
 import 'package:trackbackapp/providers/ideas_dump_provider.dart';
-import 'idea_cards.dart';
+import '../widgets/navbar.dart';
 import '../widgets/custom_appbar.dart';
-import '../widgets/custom_fab.dart';
 import '../widgets/responsive_screen.dart';
 import '../theme.dart';
+import 'idea_cards.dart';
 
 class IdeasDumpScreen extends ConsumerStatefulWidget {
   const IdeasDumpScreen({super.key});
@@ -57,23 +57,38 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // title + info icon
+                // title + info icon + home
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Ideas Dump',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        const Text(
+                          'Ideas Dump',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () => showIdeas(context),
+                          icon: const Icon(Icons.info_outline),
+                          tooltip: 'How to use',
+                          color: AppTheme.iconDefaultLight,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
+                    const Spacer(),
+                    // right icon
                     IconButton(
-                      onPressed: () => showIdeas(context),
-                      icon: const Icon(Icons.info_outline),
-                      tooltip: 'How to use',
-                      color: AppTheme.iconDefaultLight,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    )
+                        icon: const Icon(Icons.task,
+                            size: 26, color: Colors.orangeAccent),
+                        tooltip: 'Add new',
+                        onPressed: () {
+                          // reutrn to home via shell state - keeps bottom nav and avoids back stack
+                          ref.read(shellPageProvider.notifier).state =
+                              ShellPage.home;
+                        })
                   ],
                 ),
                 // cards - draggable masonry grid

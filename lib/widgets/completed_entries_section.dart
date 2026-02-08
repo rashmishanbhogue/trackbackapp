@@ -88,7 +88,17 @@ class CompletedEntriesSection extends StatelessWidget {
                         ),
                         const Spacer(),
                         // badge
-                        buildBadge(entries.length),
+                        // buildBadge(entries.length),
+                        // entry count per tile
+                        Text(
+                          '(${entries.length})',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: isDark
+                                  ? AppTheme.textSecondaryDark
+                                  : AppTheme.textSecondaryLight),
+                        )
                       ],
                     ),
                     onTap: onToggle,
