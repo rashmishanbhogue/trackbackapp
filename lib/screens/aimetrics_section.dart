@@ -330,9 +330,30 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text(
-            'AI Categorised Labels',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'AI Categorised Labels',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'What this does',
+                waitDuration: const Duration(milliseconds: 400),
+                child: InkResponse(
+                  onTap: () {
+                    showAiMetricsInfo(context);
+                  },
+                  radius: 12,
+                  child: const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppTheme.iconDefaultLight,
+                  ),
+                ),
+              ),
+            ],
           ),
           TextButton.icon(
             onPressed: isRefreshing
@@ -909,4 +930,59 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
   DateTime getEndOfWeek(DateTime date) {
     return date.add(Duration(days: DateTime.daysPerWeek - date.weekday));
   }
+}
+
+void showAiMetricsInfo(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: AppTheme.leisureLightest,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'What this does',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 18,
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Optional metrics that makes use of internet and AI, to group your entries, ONLY if Refresh is pressed',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text('• Press Refresh to re-run categorisation'),
+              const Text('• Use filters to limit by day, week, month, or year'),
+              const Text('• Tap a category to expand and view entries'),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

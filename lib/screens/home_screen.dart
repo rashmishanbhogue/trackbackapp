@@ -149,7 +149,27 @@ class HomeScreenState extends ConsumerState<HomeScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Today", style: TextStyle(fontSize: 24)),
+                      Row(
+                        children: [
+                          const Text("Today", style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 10),
+                          Tooltip(
+                            message: 'How to input',
+                            waitDuration: const Duration(milliseconds: 400),
+                            child: InkResponse(
+                              onTap: () {
+                                showInputInfo(context);
+                              },
+                              radius: 12,
+                              child: const Icon(
+                                Icons.info_outline,
+                                size: 22,
+                                color: AppTheme.iconDefaultLight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       const Spacer(),
                       // buildBadge(dateEntries[todayDate]?.length ?? 0),
                       IconButton(
@@ -390,4 +410,63 @@ class HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
+}
+
+void showInputInfo(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: AppTheme.idleLight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'How to input',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 18,
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Use this section to record what you did today, or rant to offload your mind',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                  '• Single line input will be saved as completed tasks, to be viewed below'),
+              const Text(
+                  '• Multiline input is automatically saved as Ideas, saved in the Ideas section'),
+              const Text('• Tap the add icon to save'),
+              const Text(
+                  '• Tap the light bulb to view the ideas recorded so far'),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
