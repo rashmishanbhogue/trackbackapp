@@ -1,10 +1,9 @@
 // aimetrics_filter_utils.dart, to extract available dates, weeks, months and years from entries for filtering
 
+import 'package:flutter/material.dart';
 import '../utils/aimetrics_category_utils.dart';
 import '../utils/constants.dart';
-import '../utils/week_selection_utils.dart';
 import '../models/entry.dart';
-import '../screens/aimetrics_section.dart';
 
 // return all unique calendar days yyyy-mm-dd that have entries - used to enable/ disable selectable days in the day filter calendar
 List<DateTime> getAvailableDates(List<Entry> entries) {
@@ -51,26 +50,34 @@ List<Entry> filterEntriesByViewTypeAi({
 
     switch (viewType) {
       case TimeFilter.day:
-        if (selectedDay == null) return false;
-        return ts.year == selectedDay!.year &&
-            ts.month == selectedDay!.month &&
-            ts.day == selectedDay!.day;
+        // if (selectedDay == null) return false;
+        return ts.year == referenceDate.year &&
+            ts.month == referenceDate.month &&
+            ts.day == referenceDate.day;
 
       case TimeFilter.week:
-        if (rangeStartDay == null || rangeEndDay == null) return false;
-        return !ts.isBefore(rangeStartDay!) && !ts.isAfter(rangeEndDay!);
+        // if (rangeStartDay == null || rangeEndDay == null) return false;
+        // return !ts.isBefore(rangeStartDay!) && !ts.isAfter(rangeEndDay!);
+        final start =
+            referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
+        final end = start.add(const Duration(days: 6));
+        return !ts.isBefore(start) && !ts.isAfter(end);
 
       case TimeFilter.month:
-        final isMatch =
-            ts.year == referenceDate.year && ts.month == referenceDate.month;
-        return isMatch;
+        // final isMatch =
+        //     ts.year == referenceDate.year && ts.month == referenceDate.month;
+        // return isMatch;
+        return ts.year == referenceDate.year && ts.month == referenceDate.month;
 
       case TimeFilter.year:
-        final isMatch = ts.year == referenceDate.year;
-        return isMatch;
+        // final isMatch = ts.year == referenceDate.year;
+        // return isMatch;
+        return ts.year == referenceDate.year;
 
-      default:
-        return true; // timefilter.all
+      // default:
+      //   return true; // timefilter.all
+      case TimeFilter.all:
+        return true;
     }
   }).toList();
 }
@@ -106,9 +113,12 @@ Map<String, List<Entry>> groupEntriesByLabel(List<Entry> entries) {
   for (final category in standardCategories) {
     map[category] = [];
   }
+  for (final e in entries) {
+    debugPrint('LABEL RAW → "${e.label}"');
+  }
 
   for (final e in entries) {
-    final label = e.label.trim().isEmpty ? 'Uncategorized' : e.label;
+    final label = e.label.trim().isEmpty ? 'Uncategorised' : e.label;
     final broader = getBroaderCategory(label);
     map.putIfAbsent(broader, () => []).add(e);
   }
@@ -222,6 +232,10 @@ Map<String, List<Entry>> getFilteredLabelEntries({
   required DateTime selectedMonth,
   required DateTime selectedYear,
 }) {
+  if (filter == TimeFilter.all) {
+    return groupEntriesByLabel(entries);
+  }
+
   final referenceDate = getReferenceDateForFilter(
     filter: filter,
     selectedDay: selectedDay,
@@ -242,13 +256,14 @@ Map<String, List<Entry>> getFilteredLabelEntries({
   // debugPrint('ENTRIES COUNT: ${entries.length}');
 
   // tapping all does not reset the filtering logic, despite being selected otherwise
-  final filtered = filter == TimeFilter.all
-      ? entries
-      : filterEntriesByViewTypeAi(
-          entries: entries,
-          viewType: filter,
-          referenceDate: referenceDate,
-        );
+  // final filtered = filter == TimeFilter.all
+  //     ? entries
+  //     : filterEntriesByViewTypeAi(
+  final filtered = filterEntriesByViewTypeAi(
+    entries: entries,
+    viewType: filter,
+    referenceDate: referenceDate,
+  );
 
   return groupEntriesByLabel(filtered);
 }

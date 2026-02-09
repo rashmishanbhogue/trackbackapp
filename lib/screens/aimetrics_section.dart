@@ -18,9 +18,6 @@ import '../utils/month_year_utils.dart';
 import '../widgets/expandable_chips.dart';
 import '../theme.dart';
 
-// supported time based filter for metrics
-enum TimeFilter { all, day, week, month, year }
-
 class AiMetricsSection extends ConsumerStatefulWidget {
   const AiMetricsSection({super.key});
 
@@ -482,15 +479,6 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                     // get the context for this chip from its globalkey
                     final chipContext = chipKeys[index].currentContext;
                     if (chipContext == null) return;
-
-                    // scroll the selected chip into view in case it is offscreen
-                    // current position for this piece of code, since All gives issues otherwise
-                    await Scrollable.ensureVisible(
-                      chipContext,
-                      duration: const Duration(milliseconds: 300),
-                      alignment: 0.5, // center the chip in view
-                      curve: Curves.easeInOut,
-                    );
 
                     // small delay to ensure layout has fully updated after scroll
                     await Future.delayed(const Duration(milliseconds: 10));

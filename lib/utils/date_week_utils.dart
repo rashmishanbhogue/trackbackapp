@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../utils/week_selection_utils.dart';
 import '../utils/aimetrics_filter_utils.dart';
+import '../utils/constants.dart';
 import '../theme.dart';
-import '../screens/aimetrics_section.dart';
 import '../models/entry.dart';
 
 // explicit chevron change due to table_calendar built-in limitations

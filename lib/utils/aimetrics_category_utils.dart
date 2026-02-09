@@ -6,5 +6,5 @@ String getBroaderCategory(String label) {
   if (standardCategories.contains(label)) {
     return label;
   }
-  return 'Uncategorized';
+  return 'Uncategorised';
 }
