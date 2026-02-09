@@ -11,7 +11,7 @@ Future<String> classifyEntry(String text) async {
   final apiKey = dotenv.env['GROQ_API_KEY'];
 
   if (apiKey == null || apiKey.isEmpty) {
-    return 'Uncategorized'; // fallback instead of error
+    return 'Uncategorised'; // fallback instead of error
   }
 
   final headers = {
@@ -58,5 +58,5 @@ If uncertain, return "Idle".
     debugPrint('Error during classification: $e');
   }
 
-  return 'Uncategorized'; // safe fallback
+  return 'Uncategorised'; // safe fallback
 }

@@ -124,58 +124,60 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                         itemBuilder: (_, index) {
                           final page = pages[index];
 
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 24),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight:
-                                        MediaQuery.of(context).size.height *
-                                            0.55,
-                                  ),
-                                  child: AspectRatio(
-                                    aspectRatio: 9 / 16, // phone screen ratio
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                          border: Border.all(
-                                              color: theme.dividerColor,
-                                              width: 1),
-                                          boxShadow: const [
-                                            BoxShadow(
-                                                color: Colors.black12,
-                                                blurRadius: 12,
-                                                offset: Offset(0, 6))
-                                          ]),
-                                      child: Image.asset(
-                                        page.imageAsset,
-                                        fit: BoxFit.contain,
+                          return SingleChildScrollView(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxHeight:
+                                          MediaQuery.of(context).size.height *
+                                              0.55,
+                                    ),
+                                    child: AspectRatio(
+                                      aspectRatio: 9 / 16, // phone screen ratio
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            border: Border.all(
+                                                color: theme.dividerColor,
+                                                width: 1),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                  color: Colors.black12,
+                                                  blurRadius: 12,
+                                                  offset: Offset(0, 6))
+                                            ]),
+                                        child: Image.asset(
+                                          page.imageAsset,
+                                          fit: BoxFit.contain,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 32),
-                              Text(
-                                page.title,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    color: AppTheme.greyDark),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                page.subtitle,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    color: AppTheme.greyDark),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                                const SizedBox(height: 32),
+                                Text(
+                                  page.title,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w400,
+                                      color: AppTheme.greyDark),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  page.subtitle,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w400,
+                                      color: AppTheme.greyDark),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           );
                         }),
                   ),

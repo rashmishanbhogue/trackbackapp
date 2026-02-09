@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import '../screens/aimetrics_section.dart';
 import '../utils/aimetrics_filter_utils.dart';
+import '../utils/constants.dart';
 
 // build the month selector used in ai metrics screen, similar to the table calendar style
 Widget buildMonthView({
