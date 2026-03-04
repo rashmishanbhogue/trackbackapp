@@ -259,33 +259,35 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
               // previous days section - older entries for /currentmonth/ only
-              const SliverToBoxAdapter(
-                child:
-                    Text("Earlier this month", style: TextStyle(fontSize: 20)),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 10)),
-              // expandable chips for current month only
-              HomeExpansionTiles(
-                groupedByMonth: {
-                  currentMonthKey: currentMonthDates,
-                },
-                dateEntries: dateEntries,
-                previousDates: currentMonthDates,
-                monthVisibility: monthVisibility,
-                expandedChipIndex: expandedChipIndex,
-                onChipTap: (index) {
-                  setState(() {
-                    expandedChipIndex = index;
-                  });
-                },
-                onDelete: (date) {
-                  showHomeDeleteDialog(context, date, ref);
-                },
-                onMonthToggle: (_) {}, // not used for current month
-                expansionTileKeys: expansionTileKeys,
-                currentMonth: currentMonthKey,
-                ref: ref,
-              ),
+              if (currentMonthDates.isNotEmpty) ...[
+                const SliverToBoxAdapter(
+                  child: Text("Earlier this month",
+                      style: TextStyle(fontSize: 20)),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                // expandable chips for current month only
+                HomeExpansionTiles(
+                  groupedByMonth: {
+                    currentMonthKey: currentMonthDates,
+                  },
+                  dateEntries: dateEntries,
+                  previousDates: currentMonthDates,
+                  monthVisibility: monthVisibility,
+                  expandedChipIndex: expandedChipIndex,
+                  onChipTap: (index) {
+                    setState(() {
+                      expandedChipIndex = index;
+                    });
+                  },
+                  onDelete: (date) {
+                    showHomeDeleteDialog(context, date, ref);
+                  },
+                  onMonthToggle: (_) {}, // not used for current month
+                  expansionTileKeys: expansionTileKeys,
+                  currentMonth: currentMonthKey,
+                  ref: ref,
+                ),
+              ],
 
               // older entries secction
               if (olderDates.isNotEmpty) ...[
