@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trackbackapp/screens/settings_screen.dart';
 import '../screens/trends_screen.dart';
 import '../screens/ideas_dump_screen.dart';
 import '../screens/home_screen.dart';
@@ -12,7 +13,8 @@ enum ShellPage {
   trends,
   home,
   you,
-  ideas, // logical page that reuses home tab selection
+  ideas,
+  settings // logical page that reuses home tab selection
 }
 
 // single source of truth for which top-level page is visible
@@ -40,6 +42,9 @@ class CustomNavBar extends ConsumerWidget {
         break;
       case ShellPage.ideas:
         body = const IdeasDumpScreen(); // idea is a full page, not a tab
+        break;
+      case ShellPage.settings:
+        body = const SettingsScreen(); // settings is a full page, not a tab
         break;
     }
     return Scaffold(
@@ -80,6 +85,7 @@ class CustomNavBar extends ConsumerWidget {
       case ShellPage.ideas: // idea lighlights to home tab
         return 1;
       case ShellPage.you:
+      case ShellPage.settings: // settings stays in you tab
         return 2;
     }
   }
