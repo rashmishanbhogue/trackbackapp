@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:trackbackapp/widgets/navbar.dart';
+import '../widgets/custom_navbar.dart';
 import '../widgets/rewards_strip.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/responsive_screen.dart';

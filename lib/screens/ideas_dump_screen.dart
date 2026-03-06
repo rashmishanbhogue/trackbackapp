@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:trackbackapp/models/idea_item.dart';
-import 'package:trackbackapp/providers/ideas_dump_provider.dart';
-import '../widgets/navbar.dart';
+import '../models/idea_item.dart';
+import '../providers/ideas_dump_provider.dart';
+import '../widgets/custom_navbar.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/responsive_screen.dart';
 import '../theme.dart';

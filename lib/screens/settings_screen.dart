@@ -2,9 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:file_picker/file_picker.dart';
 import '../providers/theme_provider.dart';
-import '../widgets/navbar.dart';
+import '../widgets/custom_navbar.dart';
 import '../widgets/app_dropdown.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/responsive_screen.dart';
@@ -206,28 +205,47 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                         const SizedBox(height: 12),
                         const Divider(),
                         const SizedBox(height: 12),
-                        Row(
+                        const Row(
                           children: [
-                            const Text(
-                              "Test",
+                            Text(
+                              "About",
                               style: TextStyle(fontSize: 16),
                             ),
-                            const Spacer(),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: const Size(10, 30),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () {},
-                              child: const Text(
-                                "See all",
-                                style: TextStyle(
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: Colors.orangeAccent),
-                              ),
-                            )
+                            // const Spacer(),
+                            // TextButton(
+                            //   style: TextButton.styleFrom(
+                            //     padding:
+                            //         const EdgeInsets.symmetric(horizontal: 8),
+                            //     minimumSize: const Size(10, 30),
+                            //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            //   ),
+                            //   onPressed: () {},
+                            //   child: const Text(
+                            //     "See all",
+                            //     style: TextStyle(
+                            //         decoration: TextDecoration.underline,
+                            //         decorationColor: Colors.orangeAccent),
+                            //   ),
+                            // )
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                        const Row(
+                          children: [
+                            Text(
+                              "Version",
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Row(
+                          children: [
+                            Text(
+                              "About the app",
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 12),
