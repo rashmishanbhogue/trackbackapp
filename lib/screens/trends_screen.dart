@@ -380,8 +380,8 @@ class TrendsScreenState extends ConsumerState<TrendsScreen>
                                 Expanded(
                                   child: Text(
                                     isBarChart
-                                        ? 'Entries Trend:'
-                                        : 'Badge Distribution:',
+                                        ? 'Entries Trend'
+                                        : 'Badge Distribution',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,

@@ -1,8 +1,8 @@
-// navbar.dart, app's custom navbar with 5 navigations
+// custom_navbar.dart, app's custom navbar with 5 navigations
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:trackbackapp/screens/settings_screen.dart';
+import '../screens/settings_screen.dart';
 import '../screens/trends_screen.dart';
 import '../screens/ideas_dump_screen.dart';
 import '../screens/home_screen.dart';

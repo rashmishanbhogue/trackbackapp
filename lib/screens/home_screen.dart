@@ -11,7 +11,7 @@ import '../widgets/custom_fab.dart';
 // import '../widgets/badges_svg.dart';
 import '../widgets/expandable_chips.dart';
 import '../widgets/home_entries_list.dart';
-import '../widgets/navbar.dart';
+import '../widgets/custom_navbar.dart';
 import '../widgets/older_expansion_chips.dart';
 import '../widgets/responsive_screen.dart';
 import '../models/entry.dart';
@@ -262,7 +262,7 @@ class HomeScreenState extends ConsumerState<HomeScreen>
               if (currentMonthDates.isNotEmpty) ...[
                 const SliverToBoxAdapter(
                   child: Text("Earlier this month",
-                      style: TextStyle(fontSize: 20)),
+                      style: TextStyle(fontSize: 19)),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 20)),
                 // expandable chips for current month only

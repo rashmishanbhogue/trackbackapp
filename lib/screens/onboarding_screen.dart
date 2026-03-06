@@ -1,7 +1,7 @@
 // onboarding_screen.dart, onboarding for the firsttime user - placeholder for now
 
 import 'package:flutter/material.dart';
-import '../widgets/navbar.dart';
+import '../widgets/custom_navbar.dart';
 import '../theme.dart';
 
 class OnboardingScreen extends StatefulWidget {

@@ -1,10 +1,10 @@
 // splashscreen.dart, route to onboarding to home or direct home based on user onboarding
 
 import 'package:flutter/material.dart';
-import 'package:trackbackapp/screens/onboarding_screen.dart';
 import 'dart:async';
 import '../theme.dart';
-import '../widgets/navbar.dart';
+import '../widgets/custom_navbar.dart';
+import '../screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
