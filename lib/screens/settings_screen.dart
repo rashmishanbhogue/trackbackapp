@@ -230,10 +230,6 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                             )
                           ],
                         ),
-                        Row(
-                          children: [
-                            TextButton(
-                              style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: const Size(10, 30),
                                   tapTargetSize:
@@ -245,7 +241,7 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       color: AppTheme.hintTextLight)),
                             )
                           ],
-                        ),
+
                         Row(
                           children: [
                             TextButton(
