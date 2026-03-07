@@ -72,7 +72,6 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ref.read(themeProvider.notifier).toggleTheme();
                           },
                         ),
-                        // const SizedBox(height: 12),
                         const Divider(),
                         const SizedBox(height: 12),
                         const Row(
@@ -211,22 +210,6 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                               "About",
                               style: TextStyle(fontSize: 16),
                             ),
-                            // const Spacer(),
-                            // TextButton(
-                            //   style: TextButton.styleFrom(
-                            //     padding:
-                            //         const EdgeInsets.symmetric(horizontal: 8),
-                            //     minimumSize: const Size(10, 30),
-                            //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            //   ),
-                            //   onPressed: () {},
-                            //   child: const Text(
-                            //     "See all",
-                            //     style: TextStyle(
-                            //         decoration: TextDecoration.underline,
-                            //         decorationColor: Colors.orangeAccent),
-                            //   ),
-                            // )
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -242,13 +225,11 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: () => showVersionInfo(context),
                               child: const Text("Version",
                                   style: TextStyle(
-                                      // decoration: TextDecoration.underline,
                                       fontSize: 14,
                                       color: AppTheme.hintTextLight)),
                             )
                           ],
                         ),
-                        // const SizedBox(height: 12),
                         Row(
                           children: [
                             TextButton(
@@ -260,13 +241,11 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: () => showAboutApp(context),
                               child: const Text("About the app",
                                   style: TextStyle(
-                                      // decoration: TextDecoration.underline,
                                       fontSize: 14,
                                       color: AppTheme.hintTextLight)),
                             )
                           ],
                         ),
-                        // const SizedBox(height: 12),
                         Row(
                           children: [
                             TextButton(
@@ -278,7 +257,6 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: () => showPrivacyInfo(context),
                               child: const Text("Privacy",
                                   style: TextStyle(
-                                      // decoration: TextDecoration.underline,
                                       fontSize: 14,
                                       color: AppTheme.hintTextLight)),
                             )
