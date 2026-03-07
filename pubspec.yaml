@@ -1,7 +1,7 @@
 name: trackbackapp
-description: "A new Flutter project."
+description: "A reverse-todo list app. Track what you actually did instead of what you plan to do."
 publish_to: 'none'
-version: 0.1.0
+version: 0.5.0
 
 environment:
   sdk: ^3.5.3

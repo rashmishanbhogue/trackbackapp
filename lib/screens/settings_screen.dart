@@ -231,21 +231,57 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const SizedBox(height: 12),
                         const SizedBox(height: 12),
-                        const Row(
+                        Row(
                           children: [
-                            Text(
-                              "Version",
-                              style: TextStyle(fontSize: 14),
-                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(10, 30),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap),
+                              onPressed: () => showVersionInfo(context),
+                              child: const Text("Version",
+                                  style: TextStyle(
+                                      // decoration: TextDecoration.underline,
+                                      fontSize: 14,
+                                      color: AppTheme.hintTextLight)),
+                            )
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        const Row(
+                        // const SizedBox(height: 12),
+                        Row(
                           children: [
-                            Text(
-                              "About the app",
-                              style: TextStyle(fontSize: 14),
-                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(10, 30),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap),
+                              onPressed: () => showAboutApp(context),
+                              child: const Text("About the app",
+                                  style: TextStyle(
+                                      // decoration: TextDecoration.underline,
+                                      fontSize: 14,
+                                      color: AppTheme.hintTextLight)),
+                            )
+                          ],
+                        ),
+                        // const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(10, 30),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap),
+                              onPressed: () => showPrivacyInfo(context),
+                              child: const Text("Privacy",
+                                  style: TextStyle(
+                                      // decoration: TextDecoration.underline,
+                                      fontSize: 14,
+                                      color: AppTheme.hintTextLight)),
+                            )
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -280,4 +316,177 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ))));
   }
+}
+
+void showVersionInfo(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: AppTheme.idleLight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Version',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 18,
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'trackback app',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text('Version: 0.5.0 (beta)'),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void showAboutApp(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: AppTheme.idleLight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'About the app',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 18,
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Track what you did, not what you want to do',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                  'A unique note app for the neurodivergents and neurotypicals out there that struggle keeping a traditional todo list'),
+              const Text(
+                  'Visuals and optional AI metrics helps you visualise and know exactly where your effort has been spent'),
+              const Text('Rewards for even the most mundane, routine tasks!'),
+              const Text('Feel better :)'),
+              const SizedBox(height: 12),
+              const Text(
+                  'trackback was, is and forever going to stay Free of cost',
+                  style: TextStyle(fontStyle: FontStyle.italic)),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void showPrivacyInfo(BuildContext context) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: AppTheme.idleLight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Privacy',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 18,
+                    child: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'The data you input is entirely your own',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const Text(
+                  'Please be mindful of what you input with respect to the sensitivity if you choose to use our exclusive AI metrics'),
+              const Text(
+                  'AI metrics is the only section in the entire application that makes use of internet and the third-party API to help sort the input entries - the use of this section will forever stay optional'),
+              const Text('blah blah'),
+              const Text('blah blah blah'),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
