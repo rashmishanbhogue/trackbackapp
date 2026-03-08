@@ -35,7 +35,7 @@ class GroqService {
     for (final entry in entries) {
       // construct the request payload for classifying this specific entry
       final body = jsonEncode({
-        'model': 'llama3-8b-8192', // model name
+        'model': 'llama-3.3-70b-versatile', // model name
         'messages': [
           {
             'role': 'system',

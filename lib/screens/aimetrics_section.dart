@@ -202,7 +202,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
     if (!isRefreshing) {
       loadStoredMetrics();
     }
-    // loadStoredMetrics(); // reload data when navigating back to the page
+    loadStoredMetrics(); // reload data when navigating back to the page
   }
 
   Future<void> loadStoredMetrics() async {
@@ -244,7 +244,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
 
     // flatten all entries for ai processing
     final dateEntriesMap = ref.read(dateEntriesProvider);
-    final allEntries = dateEntriesMap.values.expand((list) => list).toList();
+    var allEntries = dateEntriesMap.values.expand((list) => list).toList();
 
     Map<String, int> newLabelCounts = {};
 
@@ -259,13 +259,11 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
 
     for (final entry in allEntries) {
       String label = entry.label;
-      // run ai classification only if label is missing
-      if (label.isEmpty) {
+
+      // run ai classification if label is missing or still uncategorised
+      if (label.isEmpty || label == 'Uncategorised') {
         label = await GroqService.classifySingleText(entry.text);
       }
-
-      // final validLabel = label.isNotEmpty ? label : 'Uncategorized';
-      // final category = getBroaderCategory(validLabel);
 
       // fallback label + category
       final validLabel = label.isNotEmpty ? label : 'Idle';
