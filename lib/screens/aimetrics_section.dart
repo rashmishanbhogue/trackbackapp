@@ -129,15 +129,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
       focusedDay = normalizedNow;
       selectedDay = normalizedNow;
     }
-    debugPrint("before rangeStartDay: $rangeStartDay");
-    debugPrint("before rangeEndDay: $rangeEndDay");
+    // debugPrint("before rangeStartDay: $rangeStartDay");
+    // debugPrint("before rangeEndDay: $rangeEndDay");
 
     // initilise week selection to current week
     rangeStartDay = normalizedNow;
     rangeEndDay = normalizedNow.add(const Duration(days: 6));
 
-    debugPrint("after rangeStartDay: $rangeStartDay");
-    debugPrint("after rangeEndDay: $rangeEndDay");
+    // debugPrint("after rangeStartDay: $rangeStartDay");
+    // debugPrint("after rangeEndDay: $rangeEndDay");
 
     selectedWeek = updateWeekRange(normalizedNow);
     focusedWeek = normalizedNow;
@@ -292,8 +292,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
       updatedEntriesByDate.putIfAbsent(dateKey, () => []).add(updatedEntry);
     }
 
-    debugPrint(
-        'LABEL DUMP → ${updatedEntriesByDate.values.expand((e) => e).map((e) => e.label).toSet()}');
+    // debugPrint(
+    //     'LABEL DUMP → ${updatedEntriesByDate.values.expand((e) => e).map((e) => e.label).toSet()}');
 
     // persist updated labels and timestamp
     await storeLabelsInHive(newLabelCounts);
@@ -304,8 +304,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
     ref.read(dateEntriesProvider.notifier).replaceAll(updatedEntriesByDate);
 
     final verify = ref.read(dateEntriesProvider);
-    debugPrint('AFTER REPLACE → total entries: '
-        '${verify.values.expand((e) => e).length}');
+    // debugPrint('AFTER REPLACE → total entries: '
+    //     '${verify.values.expand((e) => e).length}');
 
     setState(() {
       labelCounts = newLabelCounts;
@@ -317,7 +317,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('AiMetricsSection build');
+    // debugPrint('AiMetricsSection build');
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -515,8 +515,11 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                     // which, for the last chip, is aligned right unlike the center alignment for the rest
                     final isLastChip = index == TimeFilter.values.length - 1;
 
+                    // final entries =
+                    //     labelToEntries.values.expand((list) => list).toList();
+
                     final entries =
-                        labelToEntries.values.expand((list) => list).toList();
+                        allEntries; // day calendar selection test 8 mar
 
                     showFilterOverlay(
                       offset,
@@ -566,10 +569,10 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
   void showFilterOverlay(
       Offset offset, Size chipSize, TimeFilter filter, bool alignRight,
       {required EntryRangeInfo entryRange, List<Entry> entries = const []}) {
-    debugPrint(' showFilterOverlay called with:');
-    debugPrint('Filter: ${filter.name}');
-    debugPrint('entryRange.availableMonths: ${entryRange.availableMonths}');
-    debugPrint('entryRange.availableYears: ${entryRange.availableYears}');
+    // debugPrint(' showFilterOverlay called with:');
+    // debugPrint('Filter: ${filter.name}');
+    // debugPrint('entryRange.availableMonths: ${entryRange.availableMonths}');
+    // debugPrint('entryRange.availableYears: ${entryRange.availableYears}');
 
     removeFilterOverlay(); // remove previous overlay if any
 
@@ -581,6 +584,24 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
 
     // final entryInfo = calculateEntryRangeInfo(allEntries);
     final entryInfo = entryRange;
+
+    // prevent week state leaking into day filter
+    if (filter == TimeFilter.day && focusedDay == null) {
+      if (entryInfo.availableDays.isNotEmpty) {
+        // final firstAvailable = entryInfo.availableDays.first;
+        final firstAvailable = entryInfo.availableDays.reduce(
+          (a, b) => a.isBefore(b) ? a : b,
+        );
+
+        selectedDay = DateTime(
+          firstAvailable.year,
+          firstAvailable.month,
+          firstAvailable.day,
+        );
+
+        focusedDay = selectedDay;
+      }
+    }
 
     bool hasInitializedWeek = false;
 
@@ -701,7 +722,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                                 if (filter == TimeFilter.day)
                                   buildDayCalendar(
                                     filter: filter,
-                                    focusedDay: focusedDay ?? DateTime.now(),
+                                    focusedDay: focusedDay!,
                                     selectedDay: selectedDay,
                                     onDaySelected: (selected, focused) {
                                       setState(() {
@@ -823,8 +844,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                                   onPressed: () {
                                     removeFilterOverlay();
                                     // accept and close the overlay, filtering the data below based on the selection
-                                    debugPrint("selectedMonth: $selectedMonth");
-                                    debugPrint("selectedYear: $selectedYear");
+                                    // debugPrint("selectedMonth: $selectedMonth");
+                                    // debugPrint("selectedYear: $selectedYear");
 
                                     final referenceDate =
                                         getReferenceDateForFilter(
@@ -835,10 +856,10 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                                       selectedYear: selectedYear,
                                     );
 
-                                    debugPrint("=== Before Filtering ===");
-                                    debugPrint("Filter: $filter");
-                                    debugPrint(
-                                        "Reference Date: $referenceDate");
+                                    // debugPrint("=== Before Filtering ===");
+                                    // debugPrint("Filter: $filter");
+                                    // debugPrint(
+                                    //     "Reference Date: $referenceDate");
 
                                     final updatedLabelToEntries =
                                         getFilteredLabelEntries(
@@ -849,18 +870,18 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
                                       selectedMonth: selectedMonth,
                                       selectedYear: selectedYear,
                                     );
-                                    debugPrint("FILTER: $filter");
-                                    debugPrint("SELECTED DAY: $selectedDay");
-                                    debugPrint("SELECTED WEEK: $selectedWeek");
-                                    debugPrint(
-                                        "SELECTED MONTH: $selectedMonth");
-                                    debugPrint("SELECTED YEAR: $selectedYear");
+                                    // debugPrint("FILTER: $filter");
+                                    // debugPrint("SELECTED DAY: $selectedDay");
+                                    // debugPrint("SELECTED WEEK: $selectedWeek");
+                                    // debugPrint(
+                                    // "SELECTED MONTH: $selectedMonth");
+                                    // debugPrint("SELECTED YEAR: $selectedYear");
 
-                                    debugPrint("Grouped Entries:");
-                                    updatedLabelToEntries
-                                        .forEach((label, list) {
-                                      debugPrint("$label → ${list.length}");
-                                    });
+                                    // debugPrint("Grouped Entries:");
+                                    // updatedLabelToEntries
+                                    //     .forEach((label, list) {
+                                    //   debugPrint("$label → ${list.length}");
+                                    // });
 
                                     setState(() {
                                       selectedFilter = filter;

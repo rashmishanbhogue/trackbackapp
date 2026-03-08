@@ -55,7 +55,7 @@ If uncertain, return "Idle".
       }
     }
   } catch (e) {
-    debugPrint('Error during classification: $e');
+    // debugPrint('Error during classification: $e');
   }
 
   return 'Uncategorised'; // safe fallback

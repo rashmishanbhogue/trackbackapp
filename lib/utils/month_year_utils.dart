@@ -1,4 +1,4 @@
-// month_year_utils.dart, to handle the month and year view in the ai metrics screen
+// month_year_utils.dart, to handle the month and year view in the ai metrics section
 
 import 'package:flutter/material.dart';
 import '../theme.dart';
@@ -59,9 +59,9 @@ class MonthView extends StatelessWidget {
     final isEnabled = entryRange.availableMonths
         .any((m) => m.year == monthDate.year && m.month == monthDate.month);
 
-    debugPrint(
-        'buildMonthTile → checking month: ${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}');
-    debugPrint('isEnabled: $isEnabled');
+    // debugPrint(
+    //     'buildMonthTile → checking month: ${monthDate.year}-${monthDate.month.toString().padLeft(2, '0')}');
+    // debugPrint('isEnabled: $isEnabled');
 
     var tileColor = isSelected
         ? AppTheme.weekHighlightDark
@@ -291,8 +291,8 @@ class YearView extends StatelessWidget {
     final isSelected = selectedYear?.year == year;
     final isEnabled = entryRange.availableYears.contains(year);
 
-    debugPrint('buildYearTile → checking year: $year');
-    debugPrint('isEnabled: $isEnabled');
+    // debugPrint('buildYearTile → checking year: $year');
+    // debugPrint('isEnabled: $isEnabled');
 
     var tileColor = isSelected
         ? AppTheme.weekHighlightDark
