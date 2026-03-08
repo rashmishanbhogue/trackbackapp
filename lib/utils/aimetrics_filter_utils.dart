@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../utils/aimetrics_category_utils.dart';
 import '../utils/constants.dart';
+import '../utils/week_selection_utils.dart';
 import '../models/entry.dart';
 
 // return all unique calendar days yyyy-mm-dd that have entries - used to enable/ disable selectable days in the day filter calendar
@@ -55,13 +56,22 @@ List<Entry> filterEntriesByViewTypeAi({
             ts.month == referenceDate.month &&
             ts.day == referenceDate.day;
 
+      // case TimeFilter.week:
+      //   // if (rangeStartDay == null || rangeEndDay == null) return false;
+      //   // return !ts.isBefore(rangeStartDay!) && !ts.isAfter(rangeEndDay!);
+      //   final start =
+      //       referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
+      //   final end = start.add(const Duration(days: 6));
+      //   return !ts.isBefore(start) && !ts.isAfter(end);
+
       case TimeFilter.week:
-        // if (rangeStartDay == null || rangeEndDay == null) return false;
-        // return !ts.isBefore(rangeStartDay!) && !ts.isAfter(rangeEndDay!);
-        final start =
-            referenceDate.subtract(Duration(days: referenceDate.weekday - 1));
-        final end = start.add(const Duration(days: 6));
-        return !ts.isBefore(start) && !ts.isAfter(end);
+        if (rangeStartDay == null || rangeEndDay == null) return false;
+
+        final start = rangeStartDay!;
+        final end = rangeEndDay!;
+
+        return !ts.isBefore(start) &&
+            ts.isBefore(end.add(const Duration(days: 1)));
 
       case TimeFilter.month:
         // final isMatch =
@@ -114,7 +124,7 @@ Map<String, List<Entry>> groupEntriesByLabel(List<Entry> entries) {
     map[category] = [];
   }
   for (final e in entries) {
-    debugPrint('LABEL RAW → "${e.label}"');
+    // debugPrint('LABEL RAW → "${e.label}"');
   }
 
   for (final e in entries) {
@@ -165,8 +175,11 @@ EntryRangeInfo calculateEntryRangeInfo(List<Entry> entries) {
   //     'after IF calculateEntryRangeInfo called with ${entries.length} entries');
   final sortedEntries = entries.toList()
     ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-  final firstDate = sortedEntries.first.timestamp;
-  final lastDate = sortedEntries.last.timestamp;
+  final first = sortedEntries.first.timestamp;
+  final last = sortedEntries.last.timestamp;
+
+  final firstDate = DateTime(first.year, first.month, first.day);
+  final lastDate = DateTime(last.year, last.month, last.day);
 
   final availableDays = entries
       .map(

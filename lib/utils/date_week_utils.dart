@@ -1,4 +1,4 @@
-// date_week_utils.dart, used for overlay date and week calendar display in the ai metrics screen
+// date_week_utils.dart, used for overlay date and week calendar display in the ai metrics section
 
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -87,26 +87,81 @@ Widget buildDayCalendar({
     return day;
   }
 
+  final normalizedAvailableDays = entryInfo.availableDays
+      .map((d) => DateTime(d.year, d.month, d.day))
+      .toSet();
+
+  // debugPrint("AVAILABLE DAYS RAW: ${entryInfo.availableDays}");
+  // debugPrint("AVAILABLE DAYS NORMALIZED: $normalizedAvailableDays");
+  // debugPrint(
+  //   "CALENDAR RANGE → first:${entryInfo.firstDate} last:${entryInfo.lastDate}",
+  // );
+
   return TableCalendar(
       key: ValueKey(
           "calendar-day-${currentVisibleMonth.year}-${currentVisibleMonth.month}"),
       rowHeight: 32,
-      firstDay: firstMonth,
-      lastDay: lastMonth,
-      focusedDay: clampFocusedDay(focusedDay, firstMonth, lastMonth),
-      selectedDayPredicate: (day) => isSameDay(day, selectedDay),
-      // disable days that have no entries
-      enabledDayPredicate: (day) {
-        final d = DateTime(day.year, day.month, day.day);
-        return entryInfo.availableDays.isEmpty ||
-            entryInfo.availableDays.contains(d);
+      // firstDay: DateTime(firstMonth.year, firstMonth.month,
+      //     firstMonth.day), // day selection test 8 mar
+      // lastDay:
+      //     lastMonth.add(const Duration(days: 1)), // day selection test 8 mar
+      firstDay: entryInfo.firstDate,
+      lastDay: entryInfo.lastDate,
+      // focusedDay: clampFocusedDay(focusedDay, firstMonth, lastMonth),
+      focusedDay: clampFocusedDay(
+        focusedDay,
+        entryInfo.firstDate,
+        entryInfo.lastDate,
+      ),
+      // selectedDayPredicate: (day) => isSameDay(day, selectedDay),
+      selectedDayPredicate: (day) {
+        final result = isSameDay(day, selectedDay);
+        // debugPrint("SELECTED PREDICATE → $day vs $selectedDay = $result");
+        return result;
       },
+      // disable days that have no entries
+      // enabledDayPredicate: (day) {
+      //   final d = DateTime(day.year, day.month, day.day);
+      //   return entryInfo.availableDays.isEmpty ||
+      //       entryInfo.availableDays.contains(d);
+      // },
+
+      enabledDayPredicate: (day) {
+        final normalizedDay = DateTime(day.year, day.month, day.day);
+        final enabled = normalizedAvailableDays.contains(normalizedDay);
+
+        // debugPrint(
+        // "PREDICATE → day:$normalizedDay  enabled:$enabled  available:$normalizedAvailableDays");
+
+        return enabled;
+      },
+
+      // enabledDayPredicate: (day) {
+      //   // day selection test 8 mar
+      //   if (normalizedAvailableDays.isEmpty) return true;
+
+      //   final normalizedDay = DateTime(day.year, day.month, day.day);
+      //   return normalizedAvailableDays.any((d) =>
+      //       d.year == normalizedDay.year &&
+      //       d.month == normalizedDay.month &&
+      //       d.day == normalizedDay.day);
+      // },
+
+      // enabledDayPredicate: (day) => true,
+      // onDaySelected: (pickedDay, focusedDay) {
+      //   // normalise and propagate selection
+      //   selectedDay = DateTime(pickedDay.year, pickedDay.month,
+      //       pickedDay.day); // from aimetrics_filter_utils.dart
+      //   onDaySelected(
+      //       pickedDay, focusedDay); // still call the original callback
+      // },
+
       onDaySelected: (pickedDay, focusedDay) {
-        // normalise and propagate selection
-        selectedDay = DateTime(pickedDay.year, pickedDay.month,
-            pickedDay.day); // from aimetrics_filter_utils.dart
+        // day selection test 8 mar
         onDaySelected(
-            pickedDay, focusedDay); // still call the original callback
+          DateTime(pickedDay.year, pickedDay.month, pickedDay.day),
+          focusedDay,
+        );
       },
       // onDaySelected: onDaySelected,
       headerStyle: getDynamicHeaderStyle(
@@ -117,8 +172,8 @@ Widget buildDayCalendar({
       daysOfWeekStyle: daysOfWeekStyle,
       calendarStyle: calendarStyle,
       // custom builders required to intercept taps on disabled days
-      calendarBuilders: defaultCalendarBuilder(
-          isDark, filter, entryInfo, setState, onDisabledDayTap),
+      calendarBuilders: defaultCalendarBuilder(isDark, filter, entryInfo,
+          normalizedAvailableDays, setState, onDisabledDayTap),
       onPageChanged: (visibleMonth) {
         // setState(() {
         //   currentVisibleMonth = visibleMonth;
@@ -132,36 +187,53 @@ CalendarBuilders defaultCalendarBuilder(
   bool isDark,
   TimeFilter filter,
   EntryRangeInfo entryInfo,
+  Set<DateTime> normalizedAvailableDays,
   void Function(void Function()) setState,
   void Function(DateTime day, Offset offset) onDisabledTap,
 ) {
   return CalendarBuilders(
     defaultBuilder: (context, day, _) {
       final now = DateTime.now();
-      final isFuture = day.isAfter(DateTime(now.year, now.month, now.day));
+      // final isFuture = day.isAfter(DateTime(now.year, now.month, now.day));
+      final normalizedDay = DateTime(day.year, day.month, day.day);
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+
+      final isFuture = normalizedDay.isAfter(todayDate);
+      final isDisabled = normalizedAvailableDays.isNotEmpty &&
+          !normalizedAvailableDays.contains(normalizedDay);
+      // debugPrint(
+      //     "BUILDER → day:$normalizedDay  future:$isFuture  disabled:$isDisabled");
+
       // to handle the disabled date tap
-      final isDisabled = entryInfo.availableDays.isNotEmpty &&
-          !entryInfo.availableDays
-              .contains(DateTime(day.year, day.month, day.day));
+      // final isDisabled = entryInfo.availableDays.isNotEmpty &&
+      //     !entryInfo.availableDays
+      //         .contains(DateTime(day.year, day.month, day.day));
+      // final isDisabled = normalizedAvailableDays.isNotEmpty &&
+      //     !normalizedAvailableDays
+      //         .contains(DateTime(day.year, day.month, day.day));
 
       if (isFuture || isDisabled) {
+        // if (isFuture) {
         return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (details) {
-            onDisabledTap(day, details.globalPosition);
-          },
-          child: Center(
-            child: Text(
-              '${day.day}',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark
-                    ? AppTheme.textDisabledDark
-                    : AppTheme.textDisabledLight,
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              onDisabledTap(day, details.globalPosition);
+            },
+            child:
+                // return
+                Center(
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppTheme.textDisabledDark
+                      : AppTheme.textDisabledLight,
+                ),
               ),
-            ),
-          ),
-        );
+              // ),
+            ));
       }
 
       return null;
@@ -183,22 +255,50 @@ CalendarBuilders defaultCalendarBuilder(
         ),
       );
     },
+    // todayBuilder: (context, day, _) {
+    //   return Container(
+    //     margin: const EdgeInsets.symmetric(vertical: 2),
+    //     decoration: const BoxDecoration(
+    //       color: AppTheme.currentDotColor,
+    //       shape: BoxShape.circle,
+    //     ),
+    //     alignment: Alignment.center,
+    //     child: Text(
+    //       '${day.day}',
+    //       style: const TextStyle(
+    //         color: AppTheme.baseWhite,
+    //         fontSize: 14,
+    //       ),
+    //     ),
+    //   );
+    // },
     todayBuilder: (context, day, _) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 2),
-        decoration: const BoxDecoration(
-          color: AppTheme.currentDotColor,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          '${day.day}',
-          style: const TextStyle(
-            color: AppTheme.baseWhite,
-            fontSize: 14,
+      final normalizedDay = DateTime(day.year, day.month, day.day);
+
+      final isDisabled = normalizedAvailableDays.isNotEmpty &&
+          !normalizedAvailableDays.contains(normalizedDay);
+      // debugPrint(
+      //     "TODAY BUILDER → day:$normalizedDay disabled:$isDisabled available:$normalizedAvailableDays");
+
+      if (isDisabled) {
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          decoration: const BoxDecoration(
+            color: AppTheme.currentDotColor,
+            shape: BoxShape.circle,
           ),
-        ),
-      );
+          alignment: Alignment.center,
+          child: Text(
+            '${day.day}',
+            style: const TextStyle(
+              color: AppTheme.baseWhite,
+              fontSize: 14,
+            ),
+          ),
+        );
+      }
+
+      return null; // let TableCalendar render default selectable today
     },
   );
 }

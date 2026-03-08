@@ -87,7 +87,7 @@ If uncertain, return "Idle".
         }
       } catch (e) {
         // handle errors gracefully
-        debugPrint('Error classifying entry: ${entry.text}, Error: $e');
+        // debugPrint('Error classifying entry: ${entry.text}, Error: $e');
       }
 
       // fallback - add entry with label 'Uncategorised' if anything fails

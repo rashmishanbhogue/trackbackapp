@@ -131,7 +131,7 @@ class SettingsScreenState extends ConsumerState<SettingsScreen> {
                             Expanded(
                               child: FileUploadField(
                                 onUpload: (file) {
-                                  debugPrint("Uploading: ${file.name}");
+                                  // debugPrint("Uploading: ${file.name}");
                                 },
                               ),
                             ),

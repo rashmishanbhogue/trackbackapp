@@ -1,4 +1,4 @@
-// week_selection_utils.dart, to handle custom selection logic for week view in the ai metrics screen
+// week_selection_utils.dart, to handle custom selection logic for week view in the ai metrics section
 
 import 'package:flutter/material.dart';
 
@@ -31,8 +31,8 @@ DateTime updateWeekRange(DateTime selected) {
   rangeStartDay = normalizedStart;
   rangeEndDay = normalizedStart.add(const Duration(days: 6));
 
-  debugPrint('[WEEK SELECTED] rangeStartDay: $rangeStartDay');
-  debugPrint('[WEEK SELECTED] rangeEndDay  : $rangeEndDay');
+  // debugPrint('[WEEK SELECTED] rangeStartDay: $rangeStartDay');
+  // debugPrint('[WEEK SELECTED] rangeEndDay  : $rangeEndDay');
 
   return normalizedStart;
 }
