@@ -174,6 +174,7 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
   // how to use dialog shaped like a sticky note with a tack
   void showIdeas(BuildContext context) {
     final double noteSize = MediaQuery.of(context).size.width * 0.78;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -219,15 +220,19 @@ class IdeasDumpScreenState extends ConsumerState<IdeasDumpScreen> {
                           child: Text(
                             'How to use',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppTheme.textHintLight),
                           ),
                         ),
-                        SizedBox(height: 28),
+                        const SizedBox(height: 28),
                         Text(
                           'Use this section to dump raw ideas as text, voice notes, whiteboard captures, etc.',
+                          style: TextStyle(color: AppTheme.textHintLight),
                         ),
-                        SizedBox(height: 20),
-                        Text('Be as creative and random as possible!'),
+                        const SizedBox(height: 20),
+                        Text('Be as creative and random as possible!',
+                            style: TextStyle(color: AppTheme.textHintLight)),
                       ],
                     ),
                   ),
