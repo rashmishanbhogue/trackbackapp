@@ -14,6 +14,7 @@ class GroqService {
     // load api from .env
     final apiKey = dotenv.env['GROQ_API_KEY'];
     // debugPrint("GROQ API KEY PRESENT → ${apiKey != null && apiKey.isNotEmpty}");
+    // debugPrint("API KEY LENGTH → ${apiKey?.length}");
 
     // if they key isnt found, skip classification and return original entries
     if (apiKey == null || apiKey.isEmpty) {
@@ -75,7 +76,7 @@ Passive, unintentional, or low-engagement activity: scrolling, procrastinating, 
 
 Examples:
 "cleaned kitchen" → Maintenance
-"coding flutter app" → Productive
+"coding office work" → Productive
 "gym workout" → Wellbeing
 "watching netflix" → Leisure
 "chatting with friend" → Social
@@ -86,6 +87,7 @@ Rules:
 - Do NOT explain.
 - Do NOT add punctuation.
 - If uncertain, return Idle.
+- Return the category as a SINGLE WORD exactly matching one of the labels.
 '''
           },
           {
@@ -118,12 +120,13 @@ Rules:
           final choices = data?['choices'];
 
           if (choices != null && choices.isNotEmpty) {
-            final content = choices[0]['message']['content']?.trim();
-
             // debugPrint("GROQ PARSED LABEL → $content");
 
-            final normalized =
-                content?.replaceAll('.', '').replaceAll('"', '').trim();
+            final raw = choices[0]['message']['content'];
+
+            final normalized = raw?.replaceAll(RegExp(r'[^A-Za-z]'), '').trim();
+            // debugPrint("GROQ RAW → $raw");
+            // debugPrint("GROQ NORMALIZED → $normalized");
 
             // debugPrint("GROQ PARSED LABEL → $normalized");
 
