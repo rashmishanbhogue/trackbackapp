@@ -95,19 +95,27 @@ Rules:
           }
         ],
         'temperature': 0.0, // deterministic output, no variations
+        'max_tokens': 10,
       });
 
       try {
         // send the post request to groq
-        final response =
-            await http.post(Uri.parse(url), headers: headers, body: body);
+        final response = await http
+            .post(Uri.parse(url), headers: headers, body: body)
+            .timeout(const Duration(seconds: 20));
 
         // parse and validate the response
         if (response.statusCode == 200) {
           // debugPrint("GROQ STATUS → ${response.statusCode}");
           // debugPrint("GROQ RAW RESPONSE → ${response.body}");
-          final data = jsonDecode(response.body);
-          final choices = data['choices'];
+          Map<String, dynamic>? data;
+          try {
+            data = jsonDecode(response.body);
+          } catch (e) {
+            debugPrint("GROQ JSON PARSE ERROR");
+          }
+
+          final choices = data?['choices'];
 
           if (choices != null && choices.isNotEmpty) {
             final content = choices[0]['message']['content']?.trim();
