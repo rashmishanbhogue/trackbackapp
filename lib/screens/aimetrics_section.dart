@@ -315,11 +315,17 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
     // debugPrint('AFTER REPLACE → total entries: '
     //     '${verify.values.expand((e) => e).length}');
 
+    final refreshedEntries =
+        updatedEntriesByDate.values.expand((e) => e).toList();
+    final newRange = calculateEntryRangeInfo(refreshedEntries);
+
     setState(() {
+      allEntries = refreshedEntries;
       labelCounts = newLabelCounts;
       labelToEntries = newLabelToEntries;
       lastUpdated = now;
       isRefreshing = false;
+      entryRange = newRange;
 
       allEntries = updatedEntriesByDate.values.expand((e) => e).toList();
     });
