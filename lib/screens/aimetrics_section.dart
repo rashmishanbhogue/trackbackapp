@@ -202,7 +202,7 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
     if (!isRefreshing) {
       loadStoredMetrics();
     }
-    loadStoredMetrics(); // reload data when navigating back to the page
+    // loadStoredMetrics(); // reload data when navigating back to the page
   }
 
   Future<void> loadStoredMetrics() async {
@@ -303,7 +303,15 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
     // update the provider and persist updated entries with their new labels
     ref.read(dateEntriesProvider.notifier).replaceAll(updatedEntriesByDate);
 
-    final verify = ref.read(dateEntriesProvider);
+    final encodedEntries = {
+      for (final entry in updatedEntriesByDate.entries)
+        entry.key: entry.value.map((e) => jsonEncode(e.toJson())).toList()
+    };
+
+    final box = ref.read(hiveBoxProvider);
+    await box.put('entries', encodedEntries);
+
+    // final verify = ref.read(dateEntriesProvider);
     // debugPrint('AFTER REPLACE → total entries: '
     //     '${verify.values.expand((e) => e).length}');
 
@@ -312,6 +320,8 @@ class AiMetricsScreenState extends ConsumerState<AiMetricsSection> {
       labelToEntries = newLabelToEntries;
       lastUpdated = now;
       isRefreshing = false;
+
+      allEntries = updatedEntriesByDate.values.expand((e) => e).toList();
     });
   }
 

@@ -1,4 +1,4 @@
-// custom_navbar.dart, app's custom navbar with 5 navigations
+// custom_navbar.dart, app's custom navbar with 3 navigations
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
