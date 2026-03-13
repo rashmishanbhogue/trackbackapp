@@ -21,11 +21,26 @@ class CustomAppBar extends ConsumerStatefulWidget
 class CustomAppBarState extends ConsumerState<CustomAppBar> {
   bool isSearching = false;
   final TextEditingController searchController = TextEditingController();
+  final FocusNode searchFocus = FocusNode();
 
   @override
   void dispose() {
     searchController.dispose();
+    searchFocus.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    searchFocus.addListener(() {
+      if (!searchFocus.hasFocus) {
+        setState(() {
+          isSearching = false;
+        });
+      }
+    });
   }
 
   @override
@@ -71,23 +86,35 @@ class CustomAppBarState extends ConsumerState<CustomAppBar> {
               key: const ValueKey("searchField"),
               width: 220,
               margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                   color: isDark
                       ? AppTheme.surfaceHighDark
                       : AppTheme.surfaceHighLight,
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: isDark
+                          ? AppTheme.weekHighlightDark
+                          : AppTheme.weekHighlightLight,
+                      width: 1.8)),
               child: Row(
                 children: [
                   const Icon(Icons.search, size: 18),
                   const SizedBox(width: 6),
                   Expanded(
                     child: TextField(
+                      textInputAction: TextInputAction.search,
                       controller: searchController,
+                      focusNode: searchFocus,
                       autofocus: true,
                       decoration: InputDecoration(
                           hintText: "Search ...",
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
                           hintStyle: TextStyle(
                               color: isDark
                                   ? AppTheme.hintTextDark
@@ -116,8 +143,7 @@ class CustomAppBarState extends ConsumerState<CustomAppBar> {
                     isSearching = true;
                   });
                 },
-              ),
-            ),
+              )),
     );
   }
 }
